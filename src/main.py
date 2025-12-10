@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
-from src.forest.cart import CART, CARTConfig
+from src.forest.cart import CART, CARTConfig, PredictionMode
 from src.forest.forest import RandomForest, RandomForestConfig
 
 
@@ -21,11 +21,13 @@ def main():
     y = np.where(y <= 6, 1, 0)
 
     x_train, x_test, y_train, y_test = cast(
-        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
-        train_test_split(x, y, test_size=0.2, random_state=42),
+        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray], train_test_split(x, y, test_size=0.2)
     )
 
     config = CARTConfig(10, 2)
+    proba = PredictionMode.PROBABILITIES
+    classes = PredictionMode.LABELS
+
     tree = CART(config)
     tree.fit(x_train, y_train)
 
@@ -36,12 +38,15 @@ def main():
     sklearn_forest = RandomForestClassifier(100, random_state=42)
     sklearn_forest.fit(x_train, y_train)
 
-    y_pred_tree = tree.predict(x_test)
-    y_pred_forest = forest.predict(x_test)
+    forest_proba = forest.predict(x_test, proba)
+    sklearn_forest_proba = sklearn_forest.predict_proba(x_test)
 
-    print("My single tree: ", accuracy_score(y_test, y_pred_tree))
-    print("My forest: ", accuracy_score(y_test, y_pred_forest))
-    print("Sklearn forest: ", accuracy_score(y_test, sklearn_forest.predict(x_test)))
+    print(forest_proba[:10])
+    print(sklearn_forest_proba[:10])
+
+    print("My single tree: ", accuracy_score(y_test, tree.predict(x_test, classes)))
+    print("My forest: ", accuracy_score(y_test, forest.predict(x_test, classes)))
+    print("SKLEARN forest: ", accuracy_score(y_test, sklearn_forest.predict(x_test)))
 
 
 if __name__ == "__main__":

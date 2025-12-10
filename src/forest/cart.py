@@ -1,9 +1,15 @@
 from dataclasses import dataclass
+from enum import Enum
 
 import numpy as np
 
 from src.forest.gini import gini_gain
-from src.forest.split import split_at_threshold
+from src.forest.util import highest_probability_arg, split_at_threshold
+
+
+class PredictionMode(Enum):
+    LABELS = 0
+    PROBABILITIES = 1
 
 
 @dataclass
@@ -16,7 +22,7 @@ class DecisionNode:
 
 @dataclass
 class Leaf:
-    label: int
+    probabilities: np.ndarray
 
 
 @dataclass
@@ -33,37 +39,47 @@ class CART:
 
     def fit(self, X_train: np.ndarray, Y_train: np.ndarray) -> None:
         dataset = np.concatenate((X_train, Y_train), axis=1)
-        self.root = self._build_tree(dataset)
+        self.root = self._build_tree(dataset, np.unique(Y_train).size)
 
-    def predict(self, samples: np.ndarray) -> np.ndarray:
+    def predict(self, samples: np.ndarray, mode: PredictionMode) -> np.ndarray:
         if self.root is None:
             raise ValueError("The root is not initialized, call fit() first.")
 
-        return np.array([self._predict_recursively(self.root, sample) for sample in samples])
+        match mode:
+            case PredictionMode.LABELS:
+                return np.array([self._predict_class(self.root, sample) for sample in samples])
+            case PredictionMode.PROBABILITIES:
+                return np.array([self._predict_proba(self.root, sample) for sample in samples])
 
-    def _predict_recursively(self, node: DecisionNode | Leaf, sample: np.ndarray) -> int:
+    def _predict_class(self, node: DecisionNode | Leaf, sample: np.ndarray) -> int:
         if isinstance(node, Leaf):
-            return node.label
+            return highest_probability_arg(node.probabilities)
+        child = node.left if sample[node.feature_index] >= node.threshold else node.right
+        return self._predict_class(child, sample)
 
-        if sample[node.feature_index] >= node.threshold:
-            return self._predict_recursively(node.left, sample)
-        else:
-            return self._predict_recursively(node.right, sample)
+    def _predict_proba(self, node: DecisionNode | Leaf, sample: np.ndarray) -> np.ndarray:
+        if isinstance(node, Leaf):
+            return node.probabilities
+        child = node.left if sample[node.feature_index] >= node.threshold else node.right
+        return self._predict_proba(child, sample)
 
-    def _build_tree(self, dataset: np.ndarray, current_depth: int = 0) -> DecisionNode | Leaf:
+    def _build_tree(
+        self, dataset: np.ndarray, n_labels: int, current_depth: int = 0
+    ) -> DecisionNode | Leaf:
         n_samples = dataset.shape[0]
         dataset_labels = dataset[:, -1]
 
         split = self._find_best_split(dataset)
         if split is None or n_samples < self.min_samples_split or current_depth >= self.max_depth:
+            proba = np.zeros(n_labels)
             unique, counts = np.unique(dataset_labels, return_counts=True)
-            most_frequent = unique[counts == counts.max()]
-            return Leaf(np.random.choice(most_frequent))
+            proba[unique.astype(int)] = counts / np.sum(counts)
+            return Leaf(proba)
 
         feature, threshold, left_split, right_split = split
 
-        left_subtree = self._build_tree(left_split, current_depth + 1)
-        right_subtree = self._build_tree(right_split, current_depth + 1)
+        left_subtree = self._build_tree(left_split, n_labels, current_depth + 1)
+        right_subtree = self._build_tree(right_split, n_labels, current_depth + 1)
 
         return DecisionNode(feature, threshold, left_subtree, right_subtree)
 
