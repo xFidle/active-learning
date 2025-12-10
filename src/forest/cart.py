@@ -3,7 +3,8 @@ from typing import Protocol
 
 import numpy as np
 
-from src.tree.split import split_at_threshold
+from src.forest.gini import gini_gain
+from src.forest.split import split_at_threshold
 
 
 class SplitEvalFunction(Protocol):
@@ -11,11 +12,11 @@ class SplitEvalFunction(Protocol):
 
 
 @dataclass
-class InnerNode:
+class DecisionNode:
     feature_index: int
     threshold: float
-    left: "InnerNode | Leaf"
-    right: "InnerNode | Leaf"
+    left: "DecisionNode | Leaf"
+    right: "DecisionNode | Leaf"
 
 
 @dataclass
@@ -27,12 +28,12 @@ class Leaf:
 class CARTConfig:
     max_depth: int
     min_samples_split: int
-    eval_function: SplitEvalFunction
+    eval_function: SplitEvalFunction = gini_gain
 
 
 class CART:
     def __init__(self, config: CARTConfig) -> None:
-        self.root: InnerNode | Leaf | None = None
+        self.root: DecisionNode | Leaf | None = None
         self.max_depth: int = config.max_depth
         self.min_samples_split: int = config.min_samples_split
         self.eval_function: SplitEvalFunction = config.eval_function
@@ -41,13 +42,13 @@ class CART:
         dataset = np.concatenate((X_train, Y_train), axis=1)
         self.root = self._build_tree(dataset)
 
-    def predict(self, node: InnerNode | Leaf | None, sample: np.ndarray) -> int:
-        if node is None:
-            raise ValueError("The root is not initalized, call fit() first.")
+    def predict(self, sample: np.ndarray) -> int:
+        if self.root is None:
+            raise ValueError("The root is not initialized, call fit() first.")
 
-        return self._predict_recursively(node, sample)
+        return self._predict_recursively(self.root, sample)
 
-    def _predict_recursively(self, node: InnerNode | Leaf, sample: np.ndarray) -> int:
+    def _predict_recursively(self, node: DecisionNode | Leaf, sample: np.ndarray) -> int:
         if isinstance(node, Leaf):
             return node.label
 
@@ -56,22 +57,30 @@ class CART:
         else:
             return self._predict_recursively(node.right, sample)
 
-    def _build_tree(self, dataset: np.ndarray, current_depth: int = 0) -> InnerNode | Leaf:
+    def _build_tree(self, dataset: np.ndarray, current_depth: int = 0) -> DecisionNode | Leaf:
         n_samples = dataset.shape[0]
 
         dataset_labels = dataset[:, -1]
         unique, counts = np.unique(dataset_labels, return_counts=True)
-        if unique.size == 1 or n_samples < self.min_samples_split or current_depth > self.max_depth:
-            return Leaf(unique[np.argmax(counts)])
 
-        feature, threshold, left_split, right_split = self._find_best_split(dataset)
+        if unique.size == 1:
+            return Leaf(dataset_labels[0])
+
+        split = self._find_best_split(dataset)
+        if split is None or n_samples < self.min_samples_split or current_depth >= self.max_depth:
+            most_frequent = unique[counts == counts.max()]
+            return Leaf(np.random.choice(most_frequent))
+
+        feature, threshold, left_split, right_split = split
 
         left_subtree = self._build_tree(left_split, current_depth + 1)
         right_subtree = self._build_tree(right_split, current_depth + 1)
 
-        return InnerNode(feature, threshold, left_subtree, right_subtree)
+        return DecisionNode(feature, threshold, left_subtree, right_subtree)
 
-    def _find_best_split(self, dataset: np.ndarray) -> tuple[int, float, np.ndarray, np.ndarray]:
+    def _find_best_split(
+        self, dataset: np.ndarray
+    ) -> tuple[int, float, np.ndarray, np.ndarray] | None:
         n_features = dataset.shape[1] - 1
         best_gain = -np.inf
         best_split = None
@@ -81,6 +90,9 @@ class CART:
 
             for threshold in unique_values:
                 left_split, right_split = split_at_threshold(dataset, feature_index, threshold)
+
+                if left_split.size == 0 or right_split.size == 0:
+                    continue
 
                 dataset_labels = dataset[:, -1]
                 left_labels = left_split[:, -1]
@@ -92,5 +104,4 @@ class CART:
                     best_gain = gain
                     best_split = (feature_index, threshold, left_split, right_split)
 
-        assert best_split is not None
         return best_split

@@ -1,14 +1,14 @@
 import numpy as np
 
 
-def labels_probabilities(Y: np.ndarray) -> np.ndarray:
-    n_labels = Y.size
-    _, counts = np.unique(Y, return_counts=True)
+def labels_probabilities(labels: np.ndarray) -> np.ndarray:
+    n_labels = labels.size
+    _, counts = np.unique(labels, return_counts=True)
     return counts / n_labels
 
 
-def gini_impurity(Y: np.ndarray) -> float:
-    probabilities = labels_probabilities(Y)
+def gini_impurity(labels: np.ndarray) -> float:
+    probabilities = labels_probabilities(labels)
     if probabilities.size == 0:
         return 0.0
 

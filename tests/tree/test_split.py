@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from src.tree.split import split_at_threshold
+from src.forest.split import split_at_threshold
 
 
 @pytest.mark.parametrize(

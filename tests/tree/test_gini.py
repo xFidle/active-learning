@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from src.tree.gini import gini_gain, gini_impurity, labels_probabilities
+from src.forest.gini import gini_gain, gini_impurity, labels_probabilities
 
 
 @pytest.mark.parametrize(
