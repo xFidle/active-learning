@@ -22,6 +22,10 @@ class RandomForest:
         self.tree_config: CARTConfig = config.tree_config
 
     def fit(self, X_train: np.ndarray, Y_train: np.ndarray) -> None:
+        if len(self.trees) == 0:
+            self.trees = []
+            self.selected_features = []
+
         with ProcessPoolExecutor() as executor:
             result = executor.map(
                 self._build_single_tree, [X_train] * self.n_trees, [Y_train] * self.n_trees

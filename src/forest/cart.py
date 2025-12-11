@@ -32,6 +32,9 @@ class CART:
         self.min_samples_split: int = config.min_samples_split
 
     def fit(self, X_train: np.ndarray, Y_train: np.ndarray) -> None:
+        if self.root is not None:
+            self.root = None
+
         dataset = np.concatenate((X_train, Y_train), axis=1)
         self.root = self._build_tree(dataset, np.unique(Y_train).size)
 
@@ -58,6 +61,7 @@ class CART:
         if isinstance(node, Leaf):
             return node.probabilities
         child = node.left if sample[node.feature_index] >= node.threshold else node.right
+
         return self._pp(child, sample)
 
     def _build_tree(
