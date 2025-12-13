@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from src.anaylsis.pr import PRMetrics, calculate_pr_metrics
+from src.analysis.pr import PRMetrics, calculate_pr_metrics
 from src.config import DEFAULT_STORE_DIR
 from src.model.classifier import Classifier
 from src.selector.selector import Selector
@@ -52,7 +52,7 @@ class ActiveLearner:
             self.data = config.learning_data
 
         else:
-            msg = "Learning data is not avaliable. Provide it using config or relative directory path."
+            msg = "Learning data is not available. Provide it using config or relative directory path."
             logger.error(msg)
             raise ValueError(msg)
 
@@ -62,7 +62,7 @@ class ActiveLearner:
             logger.info("Initial training done.")
 
             while self.data.X_unlabeled.shape[0] != 0:
-                logger.info(f"Samples remainig: {self.data.X_unlabeled.shape[0]}")
+                logger.info(f"Samples remaining: {self.data.X_unlabeled.shape[0]}")
                 samples_indices, size = self.selector(self.data.X_unlabeled, batch_size)
                 logger.info(f"Selected next {size} samples to label.")
 
@@ -80,7 +80,7 @@ class ActiveLearner:
                     self._label_sample(index, int(label))
                     print("Label added.")
 
-                logger.info(f"Samples batch of size {size} succesfully labeled")
+                logger.info(f"Samples batch of size {size} successfully labeled")
                 self.classifier.fit(self.data.X_train, self.data.y_train)
                 logger.info("Training with new data finished successfully.")
 
