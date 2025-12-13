@@ -17,7 +17,7 @@ class UncertaintySelector:
         proba = self.classifier.predict_proba(X)
         max_proba = np.max(proba, axis=1)
 
-        return np.argsort(np.abs(max_proba - 0.5))[:batch_size]
+        return np.argsort(np.abs(max_proba - 0.5))[: min(batch_size, X.shape[0])]
 
 
 class DiversitySelector:
@@ -25,7 +25,7 @@ class DiversitySelector:
         distances = np.linalg.norm(X[:, np.newaxis, :] - X[np.newaxis, :, :], axis=2)
         mean_distance = np.mean(distances, axis=1)
 
-        return np.argsort(mean_distance)[-batch_size:]
+        return np.argsort(mean_distance)[-min(batch_size, X.shape[0]) :]
 
 
 class RandomSelector:
@@ -35,4 +35,4 @@ class RandomSelector:
     def __call__(self, X: np.ndarray, batch_size: int = 5) -> np.ndarray:
         rng = np.random.default_rng(self.random_state)
 
-        return rng.choice(X)
+        return rng.choice(X, size=min(batch_size, X.shape[0]), replace=False)
