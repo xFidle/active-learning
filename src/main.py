@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import cast
 
@@ -25,6 +26,11 @@ def main():
         tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray], train_test_split(x, y, test_size=0.8)
     )
 
+    session_name = "forest-test"
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", filename="logs"
+    )
+
     cart_config = CARTConfig(10, 2)
     forest_config = RandomForestConfig(100, cart_config)
     forest = RandomForest(forest_config)
@@ -32,12 +38,11 @@ def main():
     learner_config = ActiveLearnerConfig(
         forest,
         UncertaintySelector(forest),
-        Path("forest-test"),
+        Path(session_name),
         LearningData(x_train[:-10, :], y_train[:-10], x_train[-10:, :]),
     )
 
     learner = ActiveLearner(learner_config)
-
     learner.loop(x_test, y_test)
 
 

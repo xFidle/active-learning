@@ -1,17 +1,20 @@
 import csv
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
 from src.anaylsis.pr import PRMetrics, calculate_pr_metrics
+from src.config import DEFAULT_STORE_DIR
 from src.model.classifier import Classifier
 from src.selector.selector import Selector
 
-DEFAULT_STORE_DIR = ".tmp"
-DATASET_DIR_NAME = "dataset"
-METRICS_DIR_NAME = "metrics"
+TRAINING_DATA_DIR = "data"
+METRICS_DIR = "metrics"
 SAVING_THRESHOLDS = [1.0, 0.5, 0.4, 0.3, 0.25]
+
+logger = logging.getLogger(__name__)
 
 
 class QuitLabeling(Exception):
@@ -41,53 +44,67 @@ class ActiveLearner:
         self.data: LearningData
 
         if self.save_dir.exists():
+            logger.info("Session restored, data loaded from files.")
             self.data = self._load_learning_data()
 
         elif config.learning_data is not None:
+            logger.info("New session created, data loaded from config.")
             self.data = config.learning_data
 
         else:
-            raise ValueError(
-                "No learning data avaliable. Either provide learning_data in config or path with exsiting data."
-            )
+            msg = "Learning data is not avaliable. Provide it using config or relative directory path."
+            logger.error(msg)
+            raise ValueError(msg)
 
-    def loop(self, X_test: np.ndarray, y_test: np.ndarray) -> None:
+    def loop(self, X_test: np.ndarray, y_test: np.ndarray, batch_size: int = 5) -> None:
         try:
             self.classifier.fit(self.data.X_train, self.data.y_train)
-            while self.data.X_unlabeled.shape[0] != 0:
-                samples_indices = self.selector(self.data.X_unlabeled, batch_size=5)
-                print("Samples to label have been chosen!")
-                for sample in sorted(samples_indices, reverse=True):
-                    self._label_sample(sample)
-                print("Selected labels saved.")
+            logger.info("Initial training done.")
 
+            while self.data.X_unlabeled.shape[0] != 0:
+                logger.info(f"Samples remainig: {self.data.X_unlabeled.shape[0]}")
+                samples_indices, size = self.selector(self.data.X_unlabeled, batch_size)
+                logger.info(f"Selected next {size} samples to label.")
+
+                for i, index in enumerate(sorted(samples_indices, reverse=True)):
+                    # TODO: display image instead of feature vector
+                    print("Sample: ", self.data.X_unlabeled[index, :])
+
+                    label = input("Enter label (0, 1, q): ")
+                    while label not in ("0", "1", "q"):
+                        label = input("Invalid label, enter once again: ")
+
+                    if label == "q":
+                        raise QuitLabeling()
+
+                    self._label_sample(index, int(label))
+                    print("Label added.")
+
+                logger.info(f"Samples batch of size {size} succesfully labeled")
                 self.classifier.fit(self.data.X_train, self.data.y_train)
+                logger.info("Training with new data finished successfully.")
+
                 metrics = calculate_pr_metrics(self.classifier, X_test, y_test)
                 self._save_metrics(metrics)
-                print("Current PR AUC score: ", metrics.auc_score, "\n")
+                logger.info(f"PR Metrics calculated and saved in {self.save_dir / METRICS_DIR}.")
 
-            print("All samples already labeled.")
+            logger.info("Successfully labeled all samples. Learning finished.")
             self._save_data()
+            logger.info(f"Learning data saved to {self.save_dir / TRAINING_DATA_DIR}.")
 
         except (KeyboardInterrupt, QuitLabeling):
+            logger.info("Process interrupted by user.")
             self._save_data()
+            logger.info(f"Learning data saved to {self.save_dir / TRAINING_DATA_DIR}.")
 
-    def _label_sample(self, sample_index: int) -> None:
-        # TODO: display sample's image, not feature vector
-        print("Sample: ", self.data.X_unlabeled[sample_index, :])
-        while (label := input("Enter label (0 or 1): ")) not in ("0", "1", "q"):
-            print("Invalid label")
-
-        if label == "q":
-            raise QuitLabeling()
-
+    def _label_sample(self, sample_index: int, label: int) -> None:
         sample = self.data.X_unlabeled[sample_index, :]
         self.data.X_unlabeled = np.delete(self.data.X_unlabeled, sample_index, axis=0)
         self.data.X_train = np.concatenate((self.data.X_train, sample[np.newaxis, :]), axis=0)
         self.data.y_train = np.append(self.data.y_train, int(label))
 
     def _load_learning_data(self) -> LearningData:
-        data_dir = self.save_dir / DATASET_DIR_NAME
+        data_dir = self.save_dir / TRAINING_DATA_DIR
 
         X_train = np.load(data_dir / "x_train.npy")
         y_train = np.load(data_dir / "y_train.npy")
@@ -96,7 +113,7 @@ class ActiveLearner:
         return LearningData(X_train, y_train, x_unlabeled)
 
     def _save_data(self) -> None:
-        data_dir = self.save_dir / DATASET_DIR_NAME
+        data_dir = self.save_dir / TRAINING_DATA_DIR
         data_dir.mkdir(parents=True, exist_ok=True)
 
         np.save(data_dir / "x_train", self.data.X_train)
@@ -104,7 +121,7 @@ class ActiveLearner:
         np.save(data_dir / "x_unlabeled", self.data.X_unlabeled)
 
     def _save_metrics(self, metrics: PRMetrics) -> None:
-        metrics_dir = self.save_dir / METRICS_DIR_NAME
+        metrics_dir = self.save_dir / METRICS_DIR
         metrics_dir.mkdir(parents=True, exist_ok=True)
 
         thresholds = SAVING_THRESHOLDS

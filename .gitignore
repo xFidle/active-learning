@@ -12,3 +12,7 @@ wheels/
 # IDE
 .vscode
 .idea
+
+# Sessions
+.sessions
+logs
