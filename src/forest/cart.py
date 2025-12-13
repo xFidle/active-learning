@@ -31,12 +31,12 @@ class CART:
         self.max_depth: int = config.max_depth
         self.min_samples_split: int = config.min_samples_split
 
-    def fit(self, X_train: np.ndarray, Y_train: np.ndarray) -> None:
+    def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
         if self.root is not None:
             self.root = None
 
-        dataset = np.concatenate((X_train, Y_train), axis=1)
-        self.root = self._build_tree(dataset, np.unique(Y_train).size)
+        dataset = np.concatenate((X_train, y_train[:, np.newaxis]), axis=1)
+        self.root = self._build_tree(dataset, np.unique(y_train).size)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         if self.root is None:

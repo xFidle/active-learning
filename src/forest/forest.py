@@ -12,7 +12,7 @@ from src.forest.util import majority_vote
 class RandomForestConfig:
     n_trees: int
     tree_config: CARTConfig
-    random_state: int | None = None
+    seed: int = 42
 
 
 class RandomForest:
@@ -21,16 +21,17 @@ class RandomForest:
         self.selected_features: list[np.ndarray] = []
         self.n_trees: int = config.n_trees
         self.tree_config: CARTConfig = config.tree_config
-        self.random_state: int | None = config.random_state
+        self.forest_rng: np.random.Generator = np.random.default_rng(config.seed)
 
-    def fit(self, X_train: np.ndarray, Y_train: np.ndarray) -> None:
+    def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
         if len(self.trees) == 0:
             self.trees = []
             self.selected_features = []
 
         with ProcessPoolExecutor() as executor:
+            seeds = self.forest_rng.integers(0, 2**32 - 1, size=self.n_trees)
             result = executor.map(
-                self._build_single_tree, [X_train] * self.n_trees, [Y_train] * self.n_trees
+                self._build_single_tree, [X_train] * self.n_trees, [y_train] * self.n_trees, seeds
             )
             executor.shutdown()
 
@@ -64,19 +65,19 @@ class RandomForest:
         return np.stack(all_predictions, axis=1)
 
     def _build_single_tree(
-        self, X_train: np.ndarray, Y_train: np.ndarray
+        self, X_train: np.ndarray, y_train: np.ndarray, seed: int
     ) -> tuple[CART, np.ndarray]:
         n_samples, n_features = X_train.shape
 
-        rng = np.random.default_rng(self.random_state)
+        rng = np.random.default_rng(seed)
 
         samples_indices = rng.choice(n_samples, int(n_samples), replace=True)
         features_indices = rng.choice(n_features, int(np.sqrt(n_features)), replace=False)
 
         X_bootstrap = X_train[np.ix_(samples_indices, features_indices)]
-        Y_bootstrap = Y_train[samples_indices]
+        y_bootstrap = y_train[samples_indices]
 
         tree = CART(self.tree_config)
-        tree.fit(X_bootstrap, Y_bootstrap)
+        tree.fit(X_bootstrap, y_bootstrap)
 
         return tree, features_indices

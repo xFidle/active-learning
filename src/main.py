@@ -19,10 +19,10 @@ def main():
     x = x.to_numpy()
     y = y.to_numpy()
 
-    y = np.where(y <= 6, 1, 0)
+    y = np.where(y <= 6, 1, 0).ravel()
 
     x_train, x_test, y_train, y_test = cast(
-        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray], train_test_split(x, y, test_size=0.5)
+        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray], train_test_split(x, y, test_size=0.8)
     )
 
     config = CARTConfig(10, 2)
