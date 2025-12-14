@@ -34,11 +34,9 @@ class SVM:
                 condition = y[idx] * (np.dot(x_i, w) + b) >= 1
 
                 if condition:
-                    w -= self.learning_rate * (2 * (1 / self.iter_count) * w)
+                    w -= self.learning_rate * w
                 else:
-                    w -= self.learning_rate * (
-                        2 * (1 / self.iter_count) * w - self.penalty * y[idx] * x_i
-                    )
+                    w -= self.learning_rate * (w - self.penalty * y[idx] * x_i)
                     b -= self.learning_rate * (-self.penalty * y[idx])
 
         self.w = w
