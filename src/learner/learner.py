@@ -6,14 +6,12 @@ from pathlib import Path
 import numpy as np
 
 from src.analysis.pr import PRMetrics, calculate_pr_metrics
-from src.config import DEFAULT_STORE_DIR
 from src.model.classifier import Classifier
 from src.selector.selector import Selector
 
 DEFAULT_STORE_DIR = ".sessions"
 TRAINING_DATA_DIR = "train"
 METRICS_DIR = "metrics"
-SAVING_THRESHOLDS = [1.0, 0.5, 0.4, 0.3, 0.25]
 
 logger = logging.getLogger(__name__)
 
@@ -64,10 +62,14 @@ class ActiveLearner:
 
             while self.data.X_unlabeled.shape[0] != 0:
                 logger.info(f"Samples remaining: {self.data.X_unlabeled.shape[0]}")
-                samples_indices, size = self.selector(self.data.X_unlabeled, batch_size)
+
+                samples_indices = self.selector(
+                    self.data.X_unlabeled, self.data.X_train, batch_size
+                )
+                size = len(samples_indices)
                 logger.info(f"Selected next {size} samples to label.")
 
-                for i, index in enumerate(sorted(samples_indices, reverse=True)):
+                for index in sorted(samples_indices, reverse=True):
                     # TODO: display image instead of feature vector
                     print("Sample: ", self.data.X_unlabeled[index, :])
 
