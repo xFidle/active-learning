@@ -6,8 +6,6 @@ from typing import Literal
 
 LogOutput = Literal["file", "stdout"]
 
-_global_logger_configured = False
-
 RESET_SEQ = "\033[0m"
 COLOR_SEQ = "\033[1;%dm"
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -66,5 +64,4 @@ def setup_logger(config: LoggerConfig) -> logging.Logger:
 
     _configure_logger(root_logger, config)
 
-    _global_logger_configured = True
     return root_logger
