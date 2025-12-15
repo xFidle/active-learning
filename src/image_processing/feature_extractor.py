@@ -38,11 +38,9 @@ def _setup_vgg16() -> tuple[nn.Module, transforms.Compose]:
 
 
 class FeatureExtractor:
-    def __init__(
-        self, model_name: Literal["resnet50", "vgg16"] = "resnet50", device: str | None = None
-    ):
+    def __init__(self, model_name: Literal["resnet50", "vgg16"] = "resnet50"):
         self.model_name: Literal["resnet50", "vgg16"] = model_name
-        self.device: str = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.model: nn.Module
         self.transform: transforms.Compose
