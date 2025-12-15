@@ -7,8 +7,21 @@ import kagglehub
 
 
 def download_data(
-    data_dir: Path | str, force_download: bool = False, dataset: str = "imsparsh/flowers-dataset"
+    data_dir: Path | str,
+    force_download: bool = False,
+    dataset: str = "imsparsh/flowers-dataset",
+    subdirs_to_copy: list[str] | None = None,
 ):
+    """
+    Download dataset and optionally copy only specific subdirectories.
+
+    Args:
+        data_dir: Target directory for the data
+        force_download: Force re-download even if data exists
+        dataset: Kaggle dataset identifier
+        subdirs_to_copy: List of subdirectory paths to copy (e.g., ["train/dandelion", "train/sunflower"])
+                        If None, copies everything
+    """
     data_dir = Path(data_dir)
 
     if data_dir.exists() and not force_download:
@@ -16,15 +29,30 @@ def download_data(
         return
 
     print(f"Downloading dataset: {dataset}")
-    download_path = kagglehub.dataset_download(dataset, force_download=force_download)
+    download_path = Path(kagglehub.dataset_download(dataset, force_download=force_download))
 
     data_dir.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(download_path, data_dir, dirs_exist_ok=True)
+
+    if subdirs_to_copy is None:
+        shutil.copytree(download_path, data_dir, dirs_exist_ok=True)
+        print(f"Copied all data to: {data_dir}")
+    else:
+        for subdir in subdirs_to_copy:
+            src = download_path / subdir
+            dst = data_dir / subdir
+
+            if not src.exists():
+                print(f"Warning: {subdir} not found in downloaded dataset")
+                continue
+
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+            print(f"Copied {subdir} to {dst}")
 
 
 def main():
     download_dir = Path("data/flowers/images")
-    download_data(download_dir)
+    download_data(download_dir, subdirs_to_copy=["train/dandelion", "train/sunflower"])
 
     data_dir = download_dir / "train"
     output_dir = Path("data/flowers/processed")
