@@ -4,9 +4,11 @@ import shutil
 from pathlib import Path
 
 import kagglehub
+from pandas._config import config
 
 from src.image_processing import FeatureExtractor
-from src.utils.argparse_logger import add_logger_arguments, get_logger_config_from_args
+from src.utils.argparse_logger import add_logger_arguments
+from src.utils.config_parser import ConfigParser
 from src.utils.logger import setup_logger
 
 logger = logging.getLogger(__name__)
@@ -89,28 +91,30 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     args = parse_args()
+    config_parser = ConfigParser()
+    logger_config, image_processing_config = config_parser.get_all()
 
-    logger_config = get_logger_config_from_args(args)
+    logger_config.argparse_overrides(args)
+    image_processing_config.argparse_overrides(args)
+
     logger = setup_logger(logger_config)
 
-    download_dir = Path(args.data_dir)
     download_data(
-        download_dir,
+        image_processing_config.data_dir,
         dataset="imsparsh/flowers-dataset",
         force_download=args.force_download,
         subdirs_to_copy=["train/dandelion", "train/sunflower"],
     )
 
-    data_dir = download_dir / "train"
-    output_dir = Path(args.output_dir)
+    data_dir = image_processing_config.data_dir / "train"
+    output_dir = image_processing_config.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    model_name = args.model
-    feature_extractor = FeatureExtractor(model_name)
+    feature_extractor = FeatureExtractor(image_processing_config.model)
 
     logger.info("Processing DANDELION images (class 0)")
     dandelion_dir = data_dir / "dandelion"
-    dandelion_csv = output_dir / f"dandelion_features_{model_name}.csv"
+    dandelion_csv = output_dir / f"dandelion_features_{image_processing_config.model}.csv"
 
     df_dandelion = feature_extractor.process_directory(
         image_dir=dandelion_dir, class_label=0, output_csv=dandelion_csv
@@ -119,7 +123,7 @@ def main():
 
     logger.info("Processing SUNFLOWER images (class 1)")
     sunflower_dir = data_dir / "sunflower"
-    sunflower_csv = output_dir / f"sunflower_features_{model_name}.csv"
+    sunflower_csv = output_dir / f"sunflower_features_{image_processing_config.model}.csv"
 
     df_sunflower = feature_extractor.process_directory(
         image_dir=sunflower_dir, class_label=1, output_csv=sunflower_csv
