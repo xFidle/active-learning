@@ -1,13 +1,10 @@
-import argparse
 import logging
 import shutil
 from pathlib import Path
 
 import kagglehub
-from pandas._config import config
 
 from src.image_processing import FeatureExtractor
-from src.utils.argparse_logger import add_logger_arguments
 from src.utils.config_parser import ConfigParser
 from src.utils.logger import setup_logger
 
@@ -58,51 +55,16 @@ def download_data(
             logger.info(f"Copied {subdir} to {dst}")
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Process flower images and extract features")
-
-    parser.add_argument(
-        "--data-dir", type=str, default=None, help="Directory to download/store image data"
-    )
-
-    parser.add_argument(
-        "--output-dir", type=str, default=None, help="Directory to save processed features"
-    )
-
-    parser.add_argument(
-        "--model",
-        type=str,
-        choices=["resnet50", "vgg16"],
-        default=None,
-        help="Model to use for feature extraction",
-    )
-
-    parser.add_argument(
-        "--force-download",
-        action="store_true",
-        default=None,
-        help="Force re-download of dataset even if it exists",
-    )
-
-    add_logger_arguments(parser)
-
-    return parser.parse_args()
-
-
 def main():
-    args = parse_args()
     config_parser = ConfigParser()
     logger_config, image_processing_config = config_parser.get_all()
-
-    logger_config.argparse_overrides(args)
-    image_processing_config.argparse_overrides(args)
 
     logger = setup_logger(logger_config)
 
     download_data(
         image_processing_config.data_dir,
         dataset="imsparsh/flowers-dataset",
-        force_download=args.force_download,
+        force_download=image_processing_config.force_download,
         subdirs_to_copy=["train/dandelion", "train/sunflower"],
     )
 

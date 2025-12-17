@@ -1,4 +1,3 @@
-import argparse
 from pathlib import Path
 from typing import cast
 
@@ -10,18 +9,13 @@ from src.forest.cart import CARTConfig
 from src.forest.forest import RandomForest, RandomForestConfig
 from src.learner.learner import ActiveLearner, ActiveLearnerConfig, LearningData
 from src.selector.selector import UncertaintySelector
-from src.utils.argparse_logger import add_logger_arguments
 from src.utils.config_parser import ConfigParser
 from src.utils.logger import setup_logger
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Active learning test")
-    add_logger_arguments(parser)
-    args = parser.parse_args()
     config_parser = ConfigParser()
     logger_config = config_parser.get_logger_config()
-    logger_config.argparse_overrides(args)
     setup_logger(logger_config)
 
 

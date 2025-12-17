@@ -1,4 +1,3 @@
-import argparse
 import logging
 import sys
 from dataclasses import dataclass, field
@@ -46,32 +45,6 @@ class LoggerConfig:
             )
 
         return level_mapping[level_upper]
-
-    def argparse_overrides(self, args: argparse.Namespace) -> "LoggerConfig":
-        overrides = {}
-
-        if args.log_level is not None:
-            overrides["level"] = self.parse_log_level(args.log_level)
-
-        if args.log_output is not None:
-            overrides["output"] = args.log_output
-
-        if args.log_file is not None:
-            overrides["log_file"] = Path(args.log_file)
-
-        if args.log_format is not None:
-            overrides["format_string"] = args.log_format
-
-        final_output = overrides.get("output", self.output)
-        final_log_file = overrides.get("log_file", self.log_file)
-
-        if "file" in final_output and final_log_file is None:
-            raise ValueError("--log-file must be specified when 'file' is in --log-output")
-
-        for key, value in overrides.items():
-            setattr(self, key, value)
-
-        return self
 
 
 def _configure_logger(logger: logging.Logger, config: LoggerConfig) -> logging.Logger:
