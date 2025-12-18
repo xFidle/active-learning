@@ -35,3 +35,9 @@ indent-style = "space"
 line-ending = "lf"
 quote-style = "double"
 skip-magic-trailing-comma = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
