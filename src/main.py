@@ -5,11 +5,11 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+from src.config import ConfigParser
 from src.forest.cart import CARTConfig
 from src.forest.forest import RandomForest, RandomForestConfig
 from src.learner.learner import ActiveLearner, ActiveLearnerConfig, LearningData
 from src.selector.selector import UncertaintySelector
-from src.utils.config_parser import ConfigParser
 from src.utils.logger import setup_logger
 
 

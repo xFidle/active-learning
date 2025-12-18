@@ -1,24 +1,14 @@
 import logging
 import sys
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
 
-LogOutput = Literal["file", "stdout"]
+from src.config.logger import LoggerConfig
 
 RESET_SEQ = "\033[0m"
 COLOR_SEQ = "\033[1;%dm"
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 
 COLORS = {"WARNING": YELLOW, "INFO": GREEN, "DEBUG": BLUE, "CRITICAL": RED, "ERROR": RED}
-
-level_mapping = {
-    "DEBUG": logging.DEBUG,
-    "INFO": logging.INFO,
-    "WARNING": logging.WARNING,
-    "ERROR": logging.ERROR,
-    "CRITICAL": logging.CRITICAL,
-}
 
 
 class ColoredFormatter(logging.Formatter):
@@ -27,24 +17,6 @@ class ColoredFormatter(logging.Formatter):
         color = COLOR_SEQ % (30 + COLORS.get(levelname, 0))
         record.levelname = f"{color}{levelname}{RESET_SEQ}"
         return super().format(record)
-
-
-@dataclass
-class LoggerConfig:
-    level: int = logging.INFO
-    output: list[LogOutput] = field(default_factory=lambda: ["stdout"])
-    log_file: Path | str | None = None
-    format_string: str | None = "%(levelname)s - %(message)s"
-
-    @staticmethod
-    def parse_log_level(level_str: str) -> int:
-        level_upper = level_str.upper()
-        if level_upper not in level_mapping:
-            raise ValueError(
-                f"Invalid log level: {level_str}. Must be one of: {', '.join(level_mapping.keys())}"
-            )
-
-        return level_mapping[level_upper]
 
 
 def _configure_logger(logger: logging.Logger, config: LoggerConfig) -> logging.Logger:

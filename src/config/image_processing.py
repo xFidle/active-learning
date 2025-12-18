@@ -2,7 +2,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from src.config.base import register_config
 
+
+@register_config(section_name="image_processing")
 @dataclass
 class ImageProcessingConfig:
     model: Literal["resnet50", "vgg16"] = "resnet50"

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import kagglehub
 
+from src.config import ConfigParser
 from src.image_processing import FeatureExtractor
-from src.utils.config_parser import ConfigParser
 from src.utils.logger import setup_logger
 
 logger = logging.getLogger(__name__)
