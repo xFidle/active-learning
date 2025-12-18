@@ -69,11 +69,8 @@ class FeatureExtractor:
         features_array: npt.NDArray[np.float32] = features.cpu().numpy().flatten()
         return features_array
 
-    def process_directory(
-        self, image_dir: Path | str, class_label: int, output_csv: Path | str
-    ) -> pd.DataFrame:
+    def process_directory(self, image_dir: Path | str, class_label: int) -> pd.DataFrame:
         image_dir = Path(image_dir)
-        output_csv = Path(output_csv)
 
         image_extensions: set[str] = {".jpg", ".jpeg", ".png"}
 
@@ -99,9 +96,5 @@ class FeatureExtractor:
             data.append(row)
 
         df: pd.DataFrame = pd.DataFrame(data)
-
-        output_csv.parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(output_csv, index=False)
-        logger.info(f"Saved {len(df)} samples to {output_csv}")
 
         return df
