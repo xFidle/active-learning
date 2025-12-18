@@ -5,6 +5,8 @@ from pathlib import Path
 import kagglehub
 
 from src.config import ConfigParser
+from src.config.data_processing import DataProcessingConfig
+from src.config.image_processing import ImageProcessingConfig
 from src.image_processing import FeatureExtractor
 from src.utils.logger import setup_logger
 
@@ -57,7 +59,8 @@ def download_data(
 
 def main():
     config_parser = ConfigParser()
-    logger_config, image_processing_config = config_parser.get_all()
+    image_processing_config = config_parser.get(ImageProcessingConfig)
+    logger_config = config_parser.get(LoggerConfig)
 
     logger = setup_logger(logger_config)
 

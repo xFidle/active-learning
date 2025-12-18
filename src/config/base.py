@@ -1,10 +1,15 @@
-"""Simple registry pattern for configuration dataclasses."""
-
 from dataclasses import fields
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, ClassVar, Protocol, TypeVar
 
-T = TypeVar("T")
+
+class DataclassInstance(Protocol):
+    __dataclass_fields__: ClassVar[dict[str, Any]]
+
+
+T = TypeVar("T", bound=DataclassInstance)
+
+T_Decorator = TypeVar("T_Decorator")
 
 _REGISTRY: dict[type, tuple[str, dict[str, str], dict[str, Callable]]] = {}
 
@@ -29,7 +34,7 @@ def register_config(
             output: list[str] = field(default_factory=lambda: ["stdout"])
     """
 
-    def decorator(config_class: type) -> type:
+    def decorator(config_class: type[T_Decorator]) -> type[T_Decorator]:
         _REGISTRY[config_class] = (section_name, field_mappings or {}, field_parsers or {})
         return config_class
 
@@ -53,7 +58,7 @@ def parse_config(config_class: type[T], section_data: dict[str, Any]) -> T:
     _, field_mappings, field_parsers = _REGISTRY[config_class]
     kwargs = {}
 
-    for field in fields(config_class):  # type: ignore
+    for field in fields(config_class):
         toml_key = field_mappings.get(field.name, field.name)
 
         if toml_key not in section_data:
@@ -68,7 +73,7 @@ def parse_config(config_class: type[T], section_data: dict[str, Any]) -> T:
 
         kwargs[field.name] = value
 
-    return config_class(**kwargs)  # type: ignore
+    return config_class(**kwargs)
 
 
 def get_all_registered() -> list[type]:

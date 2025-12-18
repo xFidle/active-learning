@@ -3,11 +3,15 @@ import tomllib
 from pathlib import Path
 from typing import TypeVar
 
-from src.config.base import get_all_registered, get_field_mappings, get_section_name, parse_config
-from src.config.image_processing import ImageProcessingConfig
-from src.config.logger import LoggerConfig
+from src.config.base import (
+    DataclassInstance,
+    get_all_registered,
+    get_field_mappings,
+    get_section_name,
+    parse_config,
+)
 
-T = TypeVar("T")
+T = TypeVar("T", bound=DataclassInstance)
 
 
 class ConfigParser:
@@ -78,6 +82,3 @@ class ConfigParser:
 
         section_data = self._raw_config[section_name]
         return parse_config(config_class, section_data)
-
-    def get_all(self) -> tuple[LoggerConfig, ImageProcessingConfig]:
-        return self.get(LoggerConfig), self.get(ImageProcessingConfig)
