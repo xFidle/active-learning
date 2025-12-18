@@ -65,7 +65,11 @@ class ActiveLearner:
             # self.classifier.fit(self.data.X_train, self.data.y_train)
             logger.info("Initial training done")
 
-            window = LabelingWindow(("sunflower", "dandelion"))
+            window = LabelingWindow(
+                ("sunflower", "dandelion"),
+                self.data.X_train.shape[0],
+                self.data.X_unlabeled.shape[0],
+            )
             while self.data.X_unlabeled.shape[0] != 0:
                 logger.info(f"Samples remaining: {self.data.X_unlabeled.shape[0]}")
 
@@ -78,19 +82,26 @@ class ActiveLearner:
                 for index in sorted(samples_indices, reverse=True):
                     img_path = Path(self.data.X_unlabeled_images_paths[int(index)])
                     window.set_sample(img_path)
+
                     label = window.wait_for_label()
 
                     if label == "q":
                         window.quit()
                         raise QuitLabeling()
 
-                    logger.info(f"Image: {self.data.X_unlabeled_images_paths[int(index)]} labeled")
                     self._label_sample(index, int(label))
+                    logger.info(f"Image {img_path} labeled")
+
+                    window.update_progress_bar(
+                        self.data.X_train.shape[0], self.data.X_unlabeled.shape[0]
+                    )
 
                 logger.info(f"Samples batch of size {size} successfully labeled")
 
+                window.show_training_status()
                 self.classifier.fit(self.data.X_train, self.data.y_train)
                 logger.info("Training with new data finished successfully")
+                window.hide_training_status()
 
                 metrics = calculate_pr_metrics(self.classifier, X_test, y_test)
                 self._save_metrics(metrics)
