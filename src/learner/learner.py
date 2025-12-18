@@ -43,7 +43,7 @@ class ActiveLearner:
         self.classifier = config.classifier
         self.selector = config.selector
         self.save_dir = DEFAULT_STORE_DIR / config.save_dir
-        self.data
+        self.data: LearningData
         if self.save_dir.exists():
             logger.info("Session restored, data loaded from files")
             self.data = self._load_data()
