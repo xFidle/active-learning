@@ -4,8 +4,8 @@ from typing import Callable
 
 import numpy as np
 
-from src.forest.cart import CART, CARTConfig
-from src.forest.util import majority_vote
+from .cart import CART, CARTConfig
+from .util import majority_vote
 
 
 @dataclass

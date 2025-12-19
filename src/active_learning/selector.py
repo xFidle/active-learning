@@ -2,7 +2,7 @@ from typing import Literal, Protocol
 
 import numpy as np
 
-from src.model.classifier import Classifier
+from src.models.classifier import Classifier
 
 
 class Selector(Protocol):

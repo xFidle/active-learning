@@ -2,8 +2,8 @@ from typing import Literal, Protocol
 
 import numpy as np
 
-from src.forest.forest import CARTConfig, RandomForest, RandomForestConfig
-from src.svm.svm import SVM, SVMConfig
+from .forest.forest import CARTConfig, RandomForest, RandomForestConfig
+from .svm.svm import SVM, SVMConfig
 
 
 class Classifier(Protocol):

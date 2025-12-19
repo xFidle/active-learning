@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.forest.gini import gini_gain
-from src.forest.util import highest_probability_arg, split_at_threshold
+from .gini import gini_gain
+from .util import highest_probability_arg, split_at_threshold
 
 
 @dataclass
