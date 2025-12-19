@@ -35,16 +35,13 @@ class ConfigParser:
                 toml_key = field_mappings.get(field.name, field.name)
                 value = getattr(default_instance, field.name)
 
-                if isinstance(value, str):
-                    formatted_value = f'"{value}"'
-                elif isinstance(value, bool):
+                if isinstance(value, bool):
                     formatted_value = str(value).lower()
-                elif isinstance(value, list):
-                    formatted_value = str(value)
-                elif isinstance(value, Path):
-                    formatted_value = f'"{value}"'
                 elif field.name == "level" and "Logger" in config_class.__name__:
                     formatted_value = f'"{logging.getLevelName(int(value))}"'
+                elif isinstance(value, DataclassInstance):
+                    data_class_fields = [field.default for field in fields(value)]
+                    formatted_value = str(data_class_fields)
                 elif value is None:
                     continue
                 else:

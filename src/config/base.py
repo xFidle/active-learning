@@ -1,8 +1,9 @@
 from dataclasses import fields
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Protocol, TypeVar
+from typing import Any, Callable, ClassVar, Protocol, TypeVar, runtime_checkable
 
 
+@runtime_checkable
 class DataclassInstance(Protocol):
     __dataclass_fields__: ClassVar[dict[str, Any]]
 
