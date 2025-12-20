@@ -7,7 +7,7 @@ from src.models.classifier import Classifier
 
 class Selector(Protocol):
     def __call__(
-        self, X_unlabeled: np.ndarray, X_train: np.ndarray, batch_size: int = 5
+        self, X_pool: np.ndarray, labeled_mask: np.ndarray, batch_size: int = 5
     ) -> np.ndarray: ...
 
 
@@ -16,39 +16,52 @@ class UncertaintySelector:
         self.classifier: Classifier = classifier
 
     def __call__(
-        self, X_unlabeled: np.ndarray, X_train: np.ndarray, batch_size: int = 5
+        self, X_pool: np.ndarray, labeled_mask: np.ndarray, batch_size: int = 5
     ) -> np.ndarray:
+        unlabeled_indices = np.flatnonzero(~labeled_mask)
+        X_unlabeled = X_pool[unlabeled_indices, :]
+
         proba = self.classifier.predict_proba(X_unlabeled)
         max_proba = np.max(proba, axis=1)
         size = min(batch_size, X_unlabeled.shape[0])
+        relative_indices = np.argsort(1 - max_proba)[-size:]
 
-        return np.argsort(1 - max_proba)[-size:]
+        return unlabeled_indices[relative_indices]
 
 
 class DiversitySelector:
     def __call__(
-        self, X_unlabeled: np.ndarray, X_train: np.ndarray, batch_size: int = 5
+        self, X_pool: np.ndarray, labeled_mask: np.ndarray, batch_size: int = 5
     ) -> np.ndarray:
+        X_train = X_pool[labeled_mask, :]
+
+        unlabeled_indices = np.flatnonzero(~labeled_mask)
+        X_unlabeled = X_pool[unlabeled_indices, :]
+
         distances = np.linalg.norm(
             X_unlabeled[:, np.newaxis, :] - X_train[np.newaxis, :, :], axis=2
         )
         min_distance = np.min(distances, axis=1)
         size = min(batch_size, X_unlabeled.shape[0])
+        relative_indices = np.argsort(min_distance)[-size:]
 
-        return np.argsort(min_distance)[-size:]
+        return unlabeled_indices[relative_indices]
 
 
 class RandomSelector:
     def __init__(self, random_state: int | None = None) -> None:
-        self.random_state: int | None = random_state
+        self.rng = np.random.default_rng(random_state)
 
     def __call__(
-        self, X_unlabeled: np.ndarray, X_train: np.ndarray, batch_size: int = 5
+        self, X_pool: np.ndarray, labeled_mask: np.ndarray, batch_size: int = 5
     ) -> np.ndarray:
-        rng = np.random.default_rng(self.random_state)
-        size = min(batch_size, X_unlabeled.shape[0])
+        unlabeled_indices = np.flatnonzero(~labeled_mask)
+        X_unlabeled = X_pool[unlabeled_indices, :]
 
-        return rng.choice(X_unlabeled.shape[0], size, replace=False)
+        size = min(batch_size, X_unlabeled.shape[0])
+        relative_indices = self.rng.choice(X_unlabeled.shape[0], size, replace=False)
+
+        return unlabeled_indices[relative_indices]
 
 
 def resolve_selector(
