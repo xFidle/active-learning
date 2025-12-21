@@ -11,6 +11,7 @@ from .util import majority_vote
 class RandomForestConfig:
     n_trees: int
     tree_config: CARTConfig
+    multiprocessing: bool
     seed: int = 42
 
 
@@ -20,6 +21,7 @@ class RandomForest:
         self.selected_features: list[np.ndarray] = []
         self.n_trees = config.n_trees
         self.tree_config = config.tree_config
+        self.multiprocessing = config.multiprocessing
         self.forest_rng = np.random.default_rng(config.seed)
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
@@ -29,15 +31,25 @@ class RandomForest:
 
         self.classes = np.unique(y_train)
 
-        with ProcessPoolExecutor() as executor:
-            seeds = self.forest_rng.integers(0, 2**32 - 1, size=self.n_trees)
-            result = executor.map(
-                self._build_single_tree, [X_train] * self.n_trees, [y_train] * self.n_trees, seeds
-            )
+        seeds = self.forest_rng.integers(0, 2**32 - 1, size=self.n_trees)
+        if self.multiprocessing:
+            with ProcessPoolExecutor() as executor:
+                result = executor.map(
+                    self._build_single_tree,
+                    [X_train] * self.n_trees,
+                    [y_train] * self.n_trees,
+                    seeds,
+                )
 
-        for tree, indices in result:
-            self.trees.append(tree)
-            self.selected_features.append(indices)
+            for tree, indices in result:
+                self.trees.append(tree)
+                self.selected_features.append(indices)
+
+        else:
+            for i in range(self.n_trees):
+                tree, indices = self._build_single_tree(X_train, y_train, seeds[i])
+                self.trees.append(tree)
+                self.selected_features.append(indices)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         if len(self.trees) == 0:

@@ -20,5 +20,7 @@ def resolve_model(name: Literal["svm", "forest"]) -> Classifier:
 
         case "forest":
             cart_config = CARTConfig(max_depth=10, min_samples_split=2)
-            forest_config = RandomForestConfig(n_trees=100, tree_config=cart_config)
+            forest_config = RandomForestConfig(
+                n_trees=100, tree_config=cart_config, multiprocessing=True
+            )
             return RandomForest(forest_config)
