@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from itertools import count
 
 import numpy as np
 
@@ -8,15 +9,10 @@ from .selector import Selector
 
 
 @dataclass
-class PredictionSnapshot:
-    labeled_ratio: float
-    proba: np.ndarray
-
-
-@dataclass
 class ExperimentResults:
+    labeled_ratio: list[float]
     y_test: np.ndarray
-    snapshots: list[PredictionSnapshot]
+    proba: np.ndarray
 
 
 @dataclass
@@ -31,7 +27,7 @@ class ActiveLearnerConfig:
 class LearningData:
     X_train: np.ndarray
     y_train: np.ndarray
-    labeled_mask: np.ndarray  # True for already labled samples, False otherwise
+    labeled_mask: np.ndarray
 
 
 class ActiveLearner:
@@ -41,17 +37,20 @@ class ActiveLearner:
         self.batch_size = config.batch_size
         self.store_results = config.store_results
         self.data = data
+        self.results: ExperimentResults
 
     def loop(self, X_test: np.ndarray, y_test: np.ndarray) -> None:
-        if self.store_results:
-            self.experiment_results: ExperimentResults = ExperimentResults(y_test, [])
-
         self.classifier.fit(
             self.data.X_train[self.data.labeled_mask], self.data.y_train[self.data.labeled_mask]
         )
 
-        while np.flatnonzero(~self.data.labeled_mask).size != 0:
-            print("Unlabeled remaining:", np.flatnonzero(~self.data.labeled_mask).size)
+        if self.store_results:
+            self._prepare_results_arrays(X_test, y_test)
+
+        for iteration in count(start=1):
+            if np.flatnonzero(~self.data.labeled_mask).shape[0] == 0:
+                break
+
             samples_indices = self.selector(
                 self.data.X_train, self.data.labeled_mask, self.batch_size
             )
@@ -63,14 +62,23 @@ class ActiveLearner:
             )
 
             if self.store_results:
-                self._store_experiment_results(X_test)
+                self._store_results(X_test, iteration)
 
-    def _store_experiment_results(self, X_test: np.ndarray) -> None:
+    def _prepare_results_arrays(self, X_test: np.ndarray, y_test: np.ndarray) -> None:
+        unlabeled = int(np.flatnonzero(~self.data.labeled_mask).shape[0])
+        n_total = unlabeled // self.batch_size + 2
+
+        self.results = ExperimentResults(
+            y_test=y_test, labeled_ratio=[0] * n_total, proba=np.empty((n_total, y_test.shape[0]))
+        )
+
+        self._store_results(X_test, 0)
+
+    def _store_results(self, X_test: np.ndarray, iteration: int) -> None:
         proba = self.classifier.predict_proba(X_test)
         majority_class_proba = proba[:, 1]
-        self.experiment_results.snapshots.append(
-            PredictionSnapshot(self._get_labeled_ratio(), majority_class_proba)
-        )
+        self.results.labeled_ratio[iteration] = self._get_labeled_ratio()
+        self.results.proba[iteration] = majority_class_proba
 
     def _get_labeled_ratio(self) -> float:
         labeled_indices = np.flatnonzero(self.data.labeled_mask)
