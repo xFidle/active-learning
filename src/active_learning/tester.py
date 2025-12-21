@@ -1,3 +1,4 @@
+import os
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -64,7 +65,7 @@ class LearnerTester:
             learners_X_test.append(X_test)
             learners_y_test.append(y_test)
 
-        with ProcessPoolExecutor() as executor:
+        with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
             proccss_pool_result = executor.map(
                 self._run_single_learner, learners, learners_X_test, learners_y_test
             )
