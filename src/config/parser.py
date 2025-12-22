@@ -1,7 +1,7 @@
-import logging
-import tomllib
+import types
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Union, get_args, get_origin
+from dataclasses import fields, is_dataclass
 
 from src.config.base import (
     DataclassInstance,
@@ -10,58 +10,83 @@ from src.config.base import (
     get_section_name,
     parse_config,
 )
+from src.config.config_format import ConfigFormat
+from src.config.toml_format import TOMLFormat
 
 T = TypeVar("T", bound=DataclassInstance)
 
 
 class ConfigParser:
-    def __init__(self, config_path: Path | str = "config.toml"):
-        self.config_path = Path(config_path)
-        self.raw_config = self._load_toml()
+    def __init__(self, config_path: Path | str = "config", format: ConfigFormat = TOMLFormat()):
+        base_path = Path(config_path)
+        self._config_path = base_path.with_suffix(format.extension)
+        self._format = format
+        self._config = self._read_config()
 
-    def _create_example_config(self) -> None:
-        from dataclasses import fields
+    def _read_config(self) -> dict[str, dict[str, Any]]:
+        config_data = self._format.read(self._config_path)
+        if config_data is None:
+            return self._create_example_config()
 
-        config_sections: list[str] = []
+        return config_data
 
-        for config_class in get_all_registered():
+    def _create_example_config(self) -> dict[str, dict[str, Any]]:
+        config_data: dict[str, dict[str, Any]] = {}
+
+        for config_class in self._get_root_configs():
             section_name = get_section_name(config_class)
-            field_mappings = get_field_mappings(config_class)
-            default_instance = config_class()
+            default_class = config_class()
+            config_class_data = ConfigParser._get_class_fields(default_class)
+            config_data[section_name] = config_class_data
 
-            section_lines = [f"[{section_name}]"]
+        self._format.write(self._config_path, config_data)
 
+        return config_data
+
+    @staticmethod
+    def _get_class_fields(config_class: DataclassInstance) -> dict[str, Any]:
+        class_data: dict[str, Any] = {}
+
+        field_mappings = {}
+        try:
+            field_mappings = get_field_mappings(config_class.__class__)
+        except ValueError:
+            pass
+
+        for field in fields(config_class):
+            key = field_mappings.get(field.name, field.name)
+            value = getattr(config_class, field.name)
+
+            if isinstance(value, bool):
+                value = str(value).lower()
+            elif isinstance(value, Path):
+                value = str(value)
+            elif isinstance(value, DataclassInstance):
+                value = ConfigParser._get_class_fields(value)
+            elif value is None:
+                continue
+
+            class_data[key] = value
+
+        return class_data
+
+    def _get_root_configs(self) -> list[type[DataclassInstance]]:
+        all_configs = get_all_registered()
+        nested_configs = set()
+        for config_class in all_configs:
             for field in fields(config_class):
-                toml_key = field_mappings.get(field.name, field.name)
-                value = getattr(default_instance, field.name)
+                field_type = field.type
+                origin = get_origin(field_type)
 
-                if isinstance(value, bool):
-                    formatted_value = str(value).lower()
-                elif field.name == "level" and "Logger" in config_class.__name__:
-                    formatted_value = f'"{logging.getLevelName(int(value))}"'
-                elif isinstance(value, DataclassInstance):
-                    data_class_fields = [field.default for field in fields(value)]
-                    formatted_value = str(data_class_fields)
-                elif value is None:
-                    continue
-                else:
-                    formatted_value = str(value)
+                if origin is Union or origin is types.UnionType:
+                    type_args = [t for t in get_args(field_type) if t is not type(None)]
+                    if type_args:
+                        field_type = type_args[0]
 
-                section_lines.append(f"{toml_key} = {formatted_value}")
+                if is_dataclass(field_type):
+                    nested_configs.add(field_type)
 
-            config_sections.append("\n".join(section_lines))
-
-        config_content = "\n\n".join(config_sections) + "\n"
-
-        with open(self.config_path, "w") as f:
-            f.write(config_content)
-
-    def _load_toml(self) -> dict[str, Any]:
-        if not self.config_path.exists():
-            self._create_example_config()
-
-        with open(self.config_path, "rb") as f:
-            return tomllib.load(f)
+        return [c for c in all_configs if c not in nested_configs]
 
     def get(self, config_class: type[T]) -> T:
         """
@@ -74,8 +99,8 @@ class ConfigParser:
         """
         section_name = get_section_name(config_class)
 
-        if section_name not in self.raw_config:
+        if section_name not in self._config:
             raise ValueError(f"Missing [{section_name}] section in config file")
 
-        section_data = self.raw_config[section_name]
+        section_data = self._config[section_name]
         return parse_config(config_class, section_data)

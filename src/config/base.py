@@ -1,6 +1,17 @@
+import types
 from dataclasses import fields
-from pathlib import Path
-from typing import Any, Callable, ClassVar, Protocol, TypeVar, runtime_checkable
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Protocol,
+    TypeVar,
+    Union,
+    cast,
+    get_args,
+    get_origin,
+    runtime_checkable,
+)
 
 
 @runtime_checkable
@@ -44,16 +55,6 @@ def register_config(
 
 
 def parse_config(config_class: type[T], section_data: dict[str, Any]) -> T:
-    """
-    Parse TOML section data into a config dataclass instance.
-
-    Args:
-        config_class: The dataclass type to instantiate
-        section_data: Raw TOML section data
-
-    Returns:
-        Instance of config_class with values from section_data
-    """
     if config_class not in _REGISTRY:
         raise ValueError(f"Config class {config_class.__name__} is not registered")
 
@@ -61,17 +62,33 @@ def parse_config(config_class: type[T], section_data: dict[str, Any]) -> T:
     kwargs = {}
 
     for field in fields(config_class):
-        toml_key = field_mappings.get(field.name, field.name)
+        key = field_mappings.get(field.name, field.name)
 
-        if toml_key not in section_data:
+        if key not in section_data:
             continue
 
-        value = section_data[toml_key]
+        value = section_data[key]
 
         if field.name in field_parsers:
             value = field_parsers[field.name](value)
-        elif field.type == Path and isinstance(value, str):
-            value = Path(value)
+        else:
+            field_type = field.type
+            origin = get_origin(field.type)
+
+            if origin is Union or origin is types.UnionType:
+                type_args = [t for t in get_args(field_type) if t is not type(None)]
+                if type_args:
+                    field_type = type_args[0]
+
+            if isinstance(field_type, type) and hasattr(field_type, "__dataclass_fields__"):
+                value = parse_config(cast(type[DataclassInstance], field_type), value)
+            elif field_type is bool and not isinstance(value, bool):
+                if isinstance(value, str):
+                    value = value.lower() in ("true", "1", "yes")
+                else:
+                    value = bool(value)
+            elif isinstance(field_type, type) and not isinstance(value, field_type):
+                value = field_type(value)
 
         kwargs[field.name] = value
 
