@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -55,7 +56,7 @@ def test_register_config_with_parsers():
     ],
 )
 def test_parse_config_basic(
-    section_data: dict, expected_name: str, expected_count: int, expected_enabled: bool
+    section_data: dict[str, Any], expected_name: str, expected_count: int, expected_enabled: bool
 ):
     @register_config(section_name="basic_test")
     @dataclass
@@ -80,7 +81,7 @@ def test_parse_config_basic(
     ],
 )
 def test_parse_config_with_defaults(
-    section_data: dict, expected_required: str, expected_optional: int
+    section_data: dict[str, Any], expected_required: str, expected_optional: int
 ):
     @register_config(section_name="defaults_test")
     @dataclass
@@ -103,7 +104,7 @@ def test_parse_config_with_defaults(
     ],
 )
 def test_parse_config_with_field_mappings(
-    section_data: dict, expected_output: str, expected_level: str
+    section_data: dict[str, Any], expected_output: str, expected_level: str
 ):
     @register_config(
         section_name="mappings_test", field_mappings={"output": "log_output", "level": "log_level"}
@@ -123,7 +124,7 @@ def test_parse_config_with_field_mappings(
     "section_data, expected_name",
     [({"name": "hello"}, "HELLO"), ({"name": "world"}, "WORLD"), ({"name": "TeSt"}, "TEST")],
 )
-def test_parse_config_with_custom_parser(section_data: dict, expected_name: str):
+def test_parse_config_with_custom_parser(section_data: dict[str, Any], expected_name: str):
     def parse_upper(value: str) -> str:
         return value.upper()
 
@@ -149,7 +150,7 @@ def test_parse_config_with_custom_parser(section_data: dict, expected_name: str)
     ],
 )
 def test_parse_config_path_conversion(
-    section_data: dict, expected_data_dir: Path, expected_output_dir: Path
+    section_data: dict[str, Any], expected_data_dir: Path, expected_output_dir: Path
 ):
     @register_config(section_name="paths_test")
     @dataclass
@@ -174,7 +175,7 @@ def test_parse_config_path_conversion(
         ({"items": ["1", "2", "3", "4", "5"]}, ["1", "2", "3", "4", "5"]),
     ],
 )
-def test_parse_config_list_field(section_data: dict, expected_items: list):
+def test_parse_config_list_field(section_data: dict[str, Any], expected_items: list[str]):
     @register_config(section_name="lists_test")
     @dataclass
     class ListConfig:

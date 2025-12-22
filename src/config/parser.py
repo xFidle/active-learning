@@ -1,7 +1,7 @@
 import logging
 import tomllib
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from src.config.base import (
     DataclassInstance,
@@ -17,12 +17,12 @@ T = TypeVar("T", bound=DataclassInstance)
 class ConfigParser:
     def __init__(self, config_path: Path | str = "config.toml"):
         self.config_path = Path(config_path)
-        self._raw_config = self._load_toml()
+        self.raw_config = self._load_toml()
 
     def _create_example_config(self) -> None:
         from dataclasses import fields
 
-        config_sections = []
+        config_sections: list[str] = []
 
         for config_class in get_all_registered():
             section_name = get_section_name(config_class)
@@ -31,7 +31,7 @@ class ConfigParser:
 
             section_lines = [f"[{section_name}]"]
 
-            for field in fields(config_class):  # type: ignore
+            for field in fields(config_class):
                 toml_key = field_mappings.get(field.name, field.name)
                 value = getattr(default_instance, field.name)
 
@@ -56,7 +56,7 @@ class ConfigParser:
         with open(self.config_path, "w") as f:
             f.write(config_content)
 
-    def _load_toml(self) -> dict:
+    def _load_toml(self) -> dict[str, Any]:
         if not self.config_path.exists():
             self._create_example_config()
 
@@ -74,8 +74,8 @@ class ConfigParser:
         """
         section_name = get_section_name(config_class)
 
-        if section_name not in self._raw_config:
+        if section_name not in self.raw_config:
             raise ValueError(f"Missing [{section_name}] section in config file")
 
-        section_data = self._raw_config[section_name]
+        section_data = self.raw_config[section_name]
         return parse_config(config_class, section_data)

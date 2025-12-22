@@ -8,17 +8,18 @@ class DataclassInstance(Protocol):
     __dataclass_fields__: ClassVar[dict[str, Any]]
 
 
+type FieldParser = Callable[..., Any]
 T = TypeVar("T", bound=DataclassInstance)
 
 T_Decorator = TypeVar("T_Decorator")
 
-_REGISTRY: dict[type, tuple[str, dict[str, str], dict[str, Callable]]] = {}
+_REGISTRY: dict[type, tuple[str, dict[str, str], dict[str, FieldParser]]] = {}
 
 
 def register_config(
     section_name: str,
     field_mappings: dict[str, str] | None = None,
-    field_parsers: dict[str, Callable[[Any], Any]] | None = None,
+    field_parsers: dict[str, FieldParser] | None = None,
 ):
     """
     Decorator to register a config dataclass.
