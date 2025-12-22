@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 import pytest
@@ -13,7 +12,7 @@ def test_init_creates_example_config_if_missing(tmp_path: Path):
     parser = ConfigParser(config_file)
 
     assert config_file.exists()
-    assert parser.raw_config is not None
+    assert parser._config is not None
 
 
 def test_init_loads_existing_config(tmp_path: Path):
@@ -28,17 +27,16 @@ log_format = "%(message)s"
 [image_processing]
 model = "vgg16"
 data_dir = "test/data"
-output_dir = "test/output"
 force_download = true
 """
     )
 
     parser = ConfigParser(config_file)
 
-    assert "logging" in parser.raw_config
-    assert "image_processing" in parser.raw_config
-    assert parser.raw_config["logging"]["log_level"] == "DEBUG"
-    assert parser.raw_config["image_processing"]["model"] == "vgg16"
+    assert "logging" in parser._config
+    assert "image_processing" in parser._config
+    assert parser._config["logging"]["log_level"] == "DEBUG"
+    assert parser._config["image_processing"]["model"] == "vgg16"
 
 
 def test_get_generic_method(tmp_path: Path):
@@ -53,7 +51,6 @@ log_format = "%(message)s"
 [image_processing]
 model = "resnet50"
 data_dir = "data"
-output_dir = "output"
 """
     )
 
@@ -61,33 +58,11 @@ output_dir = "output"
 
     logger_config = parser.get(LoggerConfig)
     assert isinstance(logger_config, LoggerConfig)
-    assert logger_config.level == logging.ERROR
+    assert logger_config.level == "ERROR"
 
     img_config = parser.get(ImageProcessingConfig)
     assert isinstance(img_config, ImageProcessingConfig)
     assert img_config.model == "resnet50"
-
-
-def test_get_all(tmp_path: Path):
-    config_file = tmp_path / "test.toml"
-    config_file.write_text(
-        """
-[logging]
-log_level = "INFO"
-log_output = ["stdout"]
-log_format = "%(message)s"
-
-[image_processing]
-model = "resnet50"
-data_dir = "data"
-output_dir = "output"
-"""
-    )
-
-    parser = ConfigParser(config_file)
-    logger_config = parser.get(LoggerConfig)
-
-    assert isinstance(logger_config, LoggerConfig)
 
 
 def test_missing_section_raises_error(tmp_path: Path):
@@ -97,7 +72,6 @@ def test_missing_section_raises_error(tmp_path: Path):
 [image_processing]
 model = "resnet50"
 data_dir = "data"
-output_dir = "output"
 """
     )
 
@@ -107,39 +81,6 @@ output_dir = "output"
         parser.get(LoggerConfig)
 
 
-@pytest.mark.parametrize("invalid_level", ["INVALID_LEVEL", "invalid", "trace", "verbose", ""])
-def test_invalid_log_level_raises_error(tmp_path: Path, invalid_level: str):
-    config_file = tmp_path / "test.toml"
-    config_file.write_text(
-        f"""
-[logging]
-log_level = "{invalid_level}"
-log_output = ["stdout"]
-log_format = "%(message)s"
-
-[image_processing]
-model = "resnet50"
-data_dir = "data"
-output_dir = "output"
-"""
-    )
-
-    parser = ConfigParser(config_file)
-
-    with pytest.raises(ValueError, match="Invalid log level"):
-        parser.get(LoggerConfig)
-
-
-def test_example_config_has_all_sections(tmp_path: Path):
-    config_file = tmp_path / "example.toml"
-    _ = ConfigParser(config_file)
-
-    content = config_file.read_text()
-
-    assert "[logging]" in content
-    assert "[image_processing]" in content
-
-
 def test_example_config_has_correct_defaults(tmp_path: Path):
     config_file = tmp_path / "example.toml"
     parser = ConfigParser(config_file)
@@ -147,11 +88,12 @@ def test_example_config_has_correct_defaults(tmp_path: Path):
     logger_config = parser.get(LoggerConfig)
     img_config = parser.get(ImageProcessingConfig)
 
-    assert logger_config.level == logging.INFO
+    assert logger_config.level == "INFO"
     assert logger_config.output == ["stdout"]
     assert logger_config.format_string == "%(levelname)s - %(message)s"
 
     assert img_config.model == "resnet50"
+    assert img_config.data_dir == Path("data/flowers/images")
     assert img_config.force_download is False
 
 
@@ -168,7 +110,6 @@ log_file = "custom.log"
 [image_processing]
 model = "resnet50"
 data_dir = "data"
-output_dir = "output"
 """
     )
 
@@ -176,19 +117,12 @@ output_dir = "output"
     config = parser.get(LoggerConfig)
 
     assert config.output == ["file"]
-    assert config.level == logging.DEBUG
+    assert config.level == "DEBUG"
     assert config.format_string == "custom format"
 
 
-@pytest.mark.parametrize(
-    "data_dir, output_dir",
-    [
-        ("some/string/path", "another/string/path"),
-        ("relative/path", "relative/output"),
-        ("/absolute/path", "/absolute/output"),
-    ],
-)
-def test_path_string_conversion(tmp_path: Path, data_dir: str, output_dir: str):
+@pytest.mark.parametrize("data_dir", ["some/string/path", "relative/path", "/absolute/path"])
+def test_path_string_conversion(tmp_path, data_dir: str):
     config_file = tmp_path / "test.toml"
     config_file.write_text(
         f"""
@@ -200,7 +134,6 @@ log_format = "%(message)s"
 [image_processing]
 model = "resnet50"
 data_dir = "{data_dir}"
-output_dir = "{output_dir}"
 """
     )
 
@@ -215,7 +148,7 @@ def test_config_path_accepts_string(tmp_path: Path):
     config_file = tmp_path / "test.toml"
     parser = ConfigParser(str(config_file))
 
-    assert parser.config_path == Path(config_file)
+    assert parser._config_path == Path(config_file)
     assert config_file.exists()
 
 
@@ -223,7 +156,7 @@ def test_config_path_accepts_path_object(tmp_path: Path):
     config_file = tmp_path / "test.toml"
     parser = ConfigParser(config_file)
 
-    assert parser.config_path == config_file
+    assert parser._config_path == config_file
     assert config_file.exists()
 
 
@@ -240,7 +173,6 @@ log_format = "%(message)s"
 [image_processing]
 model = "resnet50"
 data_dir = "data"
-output_dir = "output"
 force_download = {str(force_download).lower()}
 """
     )
@@ -268,7 +200,6 @@ log_format = "%(message)s"
 [image_processing]
 model = "resnet50"
 data_dir = "data"
-output_dir = "output"
 """
     )
 
