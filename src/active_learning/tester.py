@@ -1,3 +1,4 @@
+import logging
 import os
 from concurrent.futures import Future, ProcessPoolExecutor
 from dataclasses import dataclass, field
@@ -10,6 +11,7 @@ import pandas as pd
 from sklearn.metrics import average_precision_score, precision_recall_curve
 from sklearn.model_selection import RepeatedStratifiedKFold
 
+from src.config import register_config
 from src.utils.progress_bar import setup_progress_bars
 
 from .learner import (
@@ -23,12 +25,13 @@ from .learner import (
 logger = logging.getLogger(__name__)
 
 
+@register_config(name="tester")
 @dataclass
 class TesterConfig:
-    save_dir: str
+    save_dir: str = "results"
     n_splits: int = 5
     n_repeats: int = 3
-    labeled_ratio: float = 0.2
+    labeled_ratio: float = 0.25
     seed: int = 42
     thresholds: list[float] = field(default_factory=lambda: [0.25, 0.3, 0.4, 0.5, 0.75, 1.0])
 
@@ -49,16 +52,16 @@ class LearningBatch:
 
 class LearnerTester:
     def __init__(self, learner_config: ActiveLearnerConfig, config: TesterConfig) -> None:
-        self.learner_config = learner_config
-        self.save_dir = Path(config.save_dir)
-        self.n_splits = config.n_splits
-        self.n_repeats = config.n_repeats
-        self.labeled_ratio = config.labeled_ratio
-        self.thresholds = config.thresholds
-        self.tester_rng = np.random.default_rng(config.seed)
+        self._learner_config = learner_config
+        self._save_dir = Path(config.save_dir)
+        self._n_splits = config.n_splits
+        self._n_repeats = config.n_repeats
+        self._labeled_ratio = config.labeled_ratio
+        self._thresholds = config.thresholds
+        self._tester_rng = np.random.default_rng(config.seed)
 
     def run(self, X: np.ndarray, y: np.ndarray) -> None:
-        if not self.learner_config.store_results:
+        if not self._learner_config.should_store_results:
             raise ValueError("Learener must store metrics to aggregate them later")
 
         batch = self._get_splits(X, y)
@@ -73,7 +76,7 @@ class LearnerTester:
         prs = self._extract_prs(trials)
         logger.info("Precision-recall curves exctracted from experiments")
 
-        self.save_dir.mkdir(parents=True, exist_ok=True)
+        self._save_dir.mkdir(parents=True, exist_ok=True)
 
         self._save_aucs(trials[0].labeled_ratio, aucs)
         logger.info("PR AUCs saved to .csv file")
@@ -86,16 +89,16 @@ class LearnerTester:
         inputs: list[np.ndarray] = []
         targets: list[np.ndarray] = []
 
-        rskf = RepeatedStratifiedKFold(n_splits=self.n_splits, n_repeats=self.n_repeats)
+        rskf = RepeatedStratifiedKFold(n_splits=self._n_splits, n_repeats=self._n_repeats)
         for train_index, test_index in rskf.split(X, y):
             X_train, y_train = X[train_index, :], y[train_index]
             X_test, y_test = X[test_index, :], y[test_index]
 
             n_train = X_train.shape[0]
-            n_labeled = int(n_train * self.labeled_ratio)
+            n_labeled = int(n_train * self._labeled_ratio)
             labeled_mask = np.zeros(n_train, dtype=bool)
             labeled_mask[:n_labeled] = True
-            self.tester_rng.shuffle(labeled_mask)
+            self._tester_rng.shuffle(labeled_mask)
 
             data.append(LearningData(X_train, y_train, labeled_mask))
             inputs.append(X_test)
@@ -158,7 +161,7 @@ class LearnerTester:
 
         min_ratio = ratios[0]
 
-        for thr in self.thresholds:
+        for thr in self._thresholds:
             if thr < min_ratio:
                 continue
 
@@ -184,13 +187,13 @@ class LearnerTester:
             "p75": np.percentile(aucs, 75, axis=0),
         }
 
-        pd.DataFrame(data).to_csv(self.save_dir / "auc-results.csv", index=False)
+        pd.DataFrame(data).to_csv(self._save_dir / "auc-results.csv", index=False)
 
     def _save_prs(self, prs: list[PRResult]) -> None:
         for pr in prs:
             data = {"precision": pr.precision, "recall": pr.recall}
             pd.DataFrame(data).to_csv(
-                self.save_dir / f"precision-recall-{round(pr.threshold, 2) * 100}.csv", index=False
+                self._save_dir / f"precision-recall-{round(pr.threshold, 2) * 100}.csv", index=False
             )
 
     def _run_single_learner(
@@ -200,6 +203,6 @@ class LearnerTester:
         y_test: np.ndarray,
         ctx: MultiprocessingContext,
     ) -> ExperimentResults:
-        learner = ActiveLearner(self.learner_config, learning_data)
+        learner = ActiveLearner(self._learner_config, learning_data)
         learner.loop(X_test, y_test, ctx)
         return learner.results

@@ -17,42 +17,42 @@ class RandomForestConfig:
 
 class RandomForest:
     def __init__(self, config: RandomForestConfig) -> None:
-        self.trees: list[CART] = []
-        self.selected_features: list[np.ndarray] = []
-        self.n_trees = config.n_trees
-        self.tree_config = config.tree_config
-        self.multiprocessing = config.multiprocessing
-        self.forest_rng = np.random.default_rng(config.seed)
+        self._trees: list[CART] = []
+        self._selected_features: list[np.ndarray] = []
+        self._n_trees = config.n_trees
+        self._tree_config = config.tree_config
+        self._multiprocessing = config.multiprocessing
+        self._forest_rng = np.random.default_rng(config.seed)
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
-        if len(self.trees) == 0:
-            self.trees = []
-            self.selected_features = []
+        if len(self._trees) == 0:
+            self._trees = []
+            self._selected_features = []
 
         self.classes = np.unique(y_train)
 
-        seeds = self.forest_rng.integers(0, 2**32 - 1, size=self.n_trees)
-        if self.multiprocessing:
+        seeds = self._forest_rng.integers(0, 2**32 - 1, size=self._n_trees)
+        if self._multiprocessing:
             with ProcessPoolExecutor() as executor:
                 result = executor.map(
                     self._build_single_tree,
-                    [X_train] * self.n_trees,
-                    [y_train] * self.n_trees,
+                    [X_train] * self._n_trees,
+                    [y_train] * self._n_trees,
                     seeds,
                 )
 
             for tree, indices in result:
-                self.trees.append(tree)
-                self.selected_features.append(indices)
+                self._trees.append(tree)
+                self._selected_features.append(indices)
 
         else:
-            for i in range(self.n_trees):
+            for i in range(self._n_trees):
                 tree, indices = self._build_single_tree(X_train, y_train, seeds[i])
-                self.trees.append(tree)
-                self.selected_features.append(indices)
+                self._trees.append(tree)
+                self._selected_features.append(indices)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
-        if len(self.trees) == 0:
+        if len(self._trees) == 0:
             raise ValueError("Forest is not initalized, call fit() first.")
 
         all_predictions = self._collect_tree_labels(X)
@@ -60,7 +60,7 @@ class RandomForest:
         return np.apply_along_axis(majority_vote, 1, all_predictions)
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
-        if len(self.trees) == 0:
+        if len(self._trees) == 0:
             raise ValueError("Forest is not initalized, call fit() first.")
 
         all_predictions = self._collect_tree_proba(X)
@@ -69,15 +69,15 @@ class RandomForest:
 
     def _collect_tree_labels(self, X: np.ndarray) -> np.ndarray:
         return np.stack(
-            [tree.predict(X[:, self.selected_features[i]]) for i, tree in enumerate(self.trees)],
+            [tree.predict(X[:, self._selected_features[i]]) for i, tree in enumerate(self._trees)],
             axis=1,
         )
 
     def _collect_tree_proba(self, X: np.ndarray) -> np.ndarray:
         all_proba: list[np.ndarray] = []
 
-        for i, tree in enumerate(self.trees):
-            proba = tree.predict_proba(X[:, self.selected_features[i]])
+        for i, tree in enumerate(self._trees):
+            proba = tree.predict_proba(X[:, self._selected_features[i]])
             aligned = np.zeros((proba.shape[0], self.classes.shape[0]))
 
             indices = np.searchsorted(self.classes, tree.classes)
@@ -100,7 +100,7 @@ class RandomForest:
         X_bootstrap = X_train[np.ix_(samples_indices, features_indices)]
         y_bootstrap = y_train[samples_indices]
 
-        tree = CART(self.tree_config)
+        tree = CART(self._tree_config)
         tree.fit(X_bootstrap, y_bootstrap)
 
         return tree, features_indices

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from src.config import register_config
 from src.models.forest.util import gini_impurity
 
 from .util import highest_probability_arg
@@ -20,37 +21,38 @@ class Leaf:
     probabilities: np.ndarray
 
 
+@register_config(name="CART")
 @dataclass
 class CARTConfig:
-    max_depth: int
-    min_samples_split: int
+    max_depth: int = 10
+    min_samples_split: int = 2
 
 
 class CART:
     def __init__(self, config: CARTConfig) -> None:
-        self.root: DecisionNode | Leaf | None = None
-        self.max_depth = config.max_depth
-        self.min_samples_split = config.min_samples_split
+        self._root: DecisionNode | Leaf | None = None
+        self._max_depth = config.max_depth
+        self._min_samples_split = config.min_samples_split
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
-        if self.root is not None:
-            self.root = None
+        if self._root is not None:
+            self._root = None
 
         dataset = np.concatenate((X_train, y_train[:, np.newaxis]), axis=1)
         self.classes = np.unique(y_train)
-        self.root = self._build_tree(dataset, np.unique(y_train).size)
+        self._root = self._build_tree(dataset, np.unique(y_train).size)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
-        if self.root is None:
+        if self._root is None:
             raise ValueError("The root is not initialized, call fit() first.")
 
-        return np.array([self._pl(self.root, sample) for sample in X])
+        return np.array([self._pl(self._root, sample) for sample in X])
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
-        if self.root is None:
+        if self._root is None:
             raise ValueError("The root is not initialized, call fit() first.")
 
-        return np.array([self._pp(self.root, sample) for sample in X])
+        return np.array([self._pp(self._root, sample) for sample in X])
 
     def _pl(self, node: DecisionNode | Leaf, sample: np.ndarray) -> int:
         if isinstance(node, Leaf):
@@ -73,7 +75,7 @@ class CART:
         dataset_labels = dataset[:, -1]
 
         split = self._find_best_split(dataset)
-        if split is None or n_samples < self.min_samples_split or current_depth >= self.max_depth:
+        if split is None or n_samples < self._min_samples_split or current_depth >= self._max_depth:
             proba = np.zeros(n_labels)
             unique, counts = np.unique(dataset_labels, return_counts=True)
             proba[unique.astype(int)] = counts / np.sum(counts)
