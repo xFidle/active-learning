@@ -69,8 +69,6 @@ class ConfigParser:
                 value = str(value)
             elif isinstance(value, DataclassInstance):
                 value = ConfigParser._get_class_fields(value)
-            elif value is None:
-                continue
 
             class_data[key] = value
 
