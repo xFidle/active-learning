@@ -1,14 +1,16 @@
 import types
 from dataclasses import fields, is_dataclass
 from pathlib import Path
-from typing import Any, TypeVar, Union, get_args, get_origin
+from typing import Any, TypeVar, Union, cast, get_args, get_origin
 
 from src.config.base import (
     DataclassInstance,
     get_all_registered,
     get_field_mappings,
+    get_field_parsers,
+    get_field_serializers,
     get_section_name,
-    parse_config,
+    is_registered,
 )
 from src.config.config_format import ConfigFormat
 from src.config.toml_format import TOMLFormat
@@ -48,8 +50,10 @@ class ConfigParser:
         class_data: dict[str, Any] = {}
 
         field_mappings = {}
+        field_serializers = {}
         try:
             field_mappings = get_field_mappings(config_class.__class__)
+            field_serializers = get_field_serializers(config_class.__class__)
         except ValueError:
             pass
 
@@ -57,7 +61,11 @@ class ConfigParser:
             key = field_mappings.get(field.name, field.name)
             value = getattr(config_class, field.name)
 
-            if isinstance(value, Path):
+            if value is None:
+                continue
+            if field.name in field_serializers:
+                value = field_serializers[field.name](value)
+            elif isinstance(value, Path):
                 value = str(value)
             elif isinstance(value, DataclassInstance):
                 value = ConfigParser._get_class_fields(value)
@@ -101,4 +109,45 @@ class ConfigParser:
             raise ValueError(f"Missing [{section_name}] section in config file")
 
         section_data = self._config[section_name]
-        return parse_config(config_class, section_data)
+        return self.parse_config(config_class, section_data)
+
+    def parse_config(self, config_class: type[T], section_data: dict[str, Any]) -> T:
+        if not is_registered(config_class):
+            raise ValueError(f"Config class {config_class.__name__} is not registered")
+
+        field_mappings = get_field_mappings(config_class)
+        field_parsers = get_field_parsers(config_class)
+        kwargs = {}
+
+        for field in fields(config_class):
+            key = field_mappings.get(field.name, field.name)
+
+            if key not in section_data:
+                continue
+
+            value = section_data[key]
+
+            if field.name in field_parsers:
+                value = field_parsers[field.name](value, self)
+            else:
+                field_type = field.type
+                origin = get_origin(field.type)
+
+                if origin is Union or origin is types.UnionType:
+                    type_args = [t for t in get_args(field_type) if t is not type(None)]
+                    if type_args:
+                        field_type = type_args[0]
+
+                if isinstance(field_type, type) and hasattr(field_type, "__dataclass_fields__"):
+                    value = self.parse_config(cast(type[DataclassInstance], field_type), value)
+                elif field_type is bool and not isinstance(value, bool):
+                    if isinstance(value, str):
+                        value = value.lower() in ("true", "1", "yes")
+                    else:
+                        value = bool(value)
+                elif isinstance(field_type, type) and not isinstance(value, field_type):
+                    value = field_type(value)
+
+            kwargs[field.name] = value
+
+        return config_class(**kwargs)
