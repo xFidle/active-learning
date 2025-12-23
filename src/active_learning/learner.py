@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from multiprocessing import Event
-from multiprocessing.managers import DictProxy
+from multiprocessing import Queue
 from typing import Any
 
 import numpy as np
@@ -35,8 +34,7 @@ class LearningData:
 @dataclass
 class MultiprocessingContext:
     learner_id: int
-    proxy: DictProxy[Any, Any]
-    event: Event
+    queue: "Queue[dict[str, Any]]"
 
 
 class ActiveLearner:
@@ -75,8 +73,7 @@ class ActiveLearner:
                 self._store_results(X_test, i)
 
             if ctx is not None:
-                ctx.proxy[ctx.learner_id] = {"total": n_iter - 1, "completed": i}
-                ctx.event.set()
+                ctx.queue.put({"task_id": ctx.learner_id, "total": n_iter - 1, "completed": i})
 
     def _prepare_results_arrays(self, X_test: np.ndarray, y_test: np.ndarray, n_iter: int) -> None:
         self.results = ExperimentResults(

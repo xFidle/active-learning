@@ -3,6 +3,7 @@ import os
 from concurrent.futures import Future, ProcessPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -77,8 +78,7 @@ class LearnerTester:
         with _progress() as progress:
             with multiprocessing.Manager() as manager:
                 futures: list[Future[ExperimentResults]] = []
-                progress_state = manager.dict()
-                update_event = manager.Event()
+                update_queue: "multiprocessing.Queue[dict[str, Any]]" = manager.Queue()  # type: ignore
                 overall_progress = progress.add_task("[green]Total learners progres:")
 
                 with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
@@ -90,19 +90,18 @@ class LearnerTester:
                                 learners[i],
                                 learners_X_test[i],
                                 learners_y_test[i],
-                                MultiprocessingContext(learner_id, progress_state, update_event),
+                                MultiprocessingContext(learner_id, update_queue),
                             )
                         )
 
                     while (n_finished := sum([f.done() for f in futures])) < len(futures):
-                        update_event.wait()
-                        update_event.clear()
-
+                        event = update_queue.get()
                         progress.update(overall_progress, completed=n_finished, total=n_learners)
-                        for task_id, update_data in progress_state.items():
-                            completed = update_data["completed"]
-                            total = update_data["total"]
-                            progress.update(task_id, completed=completed, total=total)
+
+                        task_id = event["task_id"]
+                        completed = event["completed"]
+                        total = event["total"]
+                        progress.update(task_id, completed=completed, total=total)
 
                     progress.update(overall_progress, completed=n_learners)
 
