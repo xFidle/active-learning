@@ -62,7 +62,7 @@ class LearnerTester:
 
     def run(self, X: np.ndarray, y: np.ndarray) -> None:
         if not self._learner_config.should_store_results:
-            raise ValueError("Learener must store metrics to aggregate them later")
+            raise ValueError("Learner must store metrics to aggregate them later")
 
         batch = self._get_splits(X, y)
         logger.info("Splits for repeated K-fold created")
