@@ -1,14 +1,22 @@
+import multiprocessing
 import os
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import Future, ProcessPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from rich import progress
 from sklearn.metrics import average_precision_score, precision_recall_curve
 from sklearn.model_selection import RepeatedStratifiedKFold
 
-from .learner import ActiveLearner, ActiveLearnerConfig, ExperimentResults, LearningData
+from .learner import (
+    ActiveLearner,
+    ActiveLearnerConfig,
+    ExperimentResults,
+    LearningData,
+    MultiprocessingContext,
+)
 
 
 @dataclass
@@ -38,7 +46,7 @@ class LearnerTester:
         self.thresholds = config.thresholds
         self.tester_rng = np.random.default_rng(config.seed)
 
-    def aggregate_results(self, X: np.ndarray, y: np.ndarray) -> None:
+    def run(self, X: np.ndarray, y: np.ndarray) -> None:
         if not self.learner_config.store_results:
             raise ValueError("Learener must store metrics to aggregate them later")
 
@@ -65,12 +73,40 @@ class LearnerTester:
             learners_X_test.append(X_test)
             learners_y_test.append(y_test)
 
-        with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
-            proccss_pool_result = executor.map(
-                self._run_single_learner, learners, learners_X_test, learners_y_test
-            )
+        n_learners = len(learners)
+        with _progress() as progress:
+            with multiprocessing.Manager() as manager:
+                futures: list[Future[ExperimentResults]] = []
+                progress_state = manager.dict()
+                update_event = manager.Event()
+                overall_progress = progress.add_task("[green]Total learners progres:")
 
-        trials = [result for result in proccss_pool_result]
+                with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
+                    for i in range(n_learners):
+                        learner_id = progress.add_task(f"Learner {i:02d}", visible=True)
+                        futures.append(
+                            executor.submit(
+                                _run_single_learner,
+                                learners[i],
+                                learners_X_test[i],
+                                learners_y_test[i],
+                                MultiprocessingContext(learner_id, progress_state, update_event),
+                            )
+                        )
+
+                    while (n_finished := sum([f.done() for f in futures])) < len(futures):
+                        update_event.wait()
+                        update_event.clear()
+
+                        progress.update(overall_progress, completed=n_finished, total=n_learners)
+                        for task_id, update_data in progress_state.items():
+                            completed = update_data["completed"]
+                            total = update_data["total"]
+                            progress.update(task_id, completed=completed, total=total)
+
+                    progress.update(overall_progress, completed=n_learners)
+
+        trials = [f.result() for f in futures]
 
         aucs = self._extract_aucs(trials)
         prs = self._extract_prs(trials)
@@ -128,8 +164,20 @@ class LearnerTester:
                 self.save_dir / f"precision-recall-{round(pr.threshold, 2) * 100}.csv", index=False
             )
 
-    def _run_single_learner(
-        self, learner: ActiveLearner, X_test: np.ndarray, y_test: np.ndarray
-    ) -> ExperimentResults:
-        learner.loop(X_test, y_test)
-        return learner.results
+
+def _run_single_learner(
+    learner: ActiveLearner, X_test: np.ndarray, y_test: np.ndarray, ctx: MultiprocessingContext
+) -> ExperimentResults:
+    learner.loop(X_test, y_test, ctx)
+    return learner.results
+
+
+def _progress() -> progress.Progress:
+    return progress.Progress(
+        "[progress.description]{task.description}",
+        progress.BarColumn(),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        progress.TimeRemainingColumn(),
+        progress.TimeElapsedColumn(),
+        refresh_per_second=1,
+    )

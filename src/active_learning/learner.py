@@ -1,5 +1,7 @@
 from dataclasses import dataclass
-from itertools import count
+from multiprocessing import Event
+from multiprocessing.managers import DictProxy
+from typing import Any
 
 import numpy as np
 
@@ -30,6 +32,13 @@ class LearningData:
     labeled_mask: np.ndarray
 
 
+@dataclass
+class MultiprocessingContext:
+    learner_id: int
+    proxy: DictProxy[Any, Any]
+    event: Event
+
+
 class ActiveLearner:
     def __init__(self, config: ActiveLearnerConfig, data: LearningData) -> None:
         self.classifier = config.classifier
@@ -37,20 +46,21 @@ class ActiveLearner:
         self.batch_size = config.batch_size
         self.store_results = config.store_results
         self.data = data
-        self.results: ExperimentResults
 
-    def loop(self, X_test: np.ndarray, y_test: np.ndarray) -> None:
+    def loop(
+        self, X_test: np.ndarray, y_test: np.ndarray, ctx: MultiprocessingContext | None = None
+    ) -> None:
         self.classifier.fit(
             self.data.X_train[self.data.labeled_mask], self.data.y_train[self.data.labeled_mask]
         )
 
+        unlabeled = int(np.flatnonzero(~self.data.labeled_mask).shape[0])
+        n_iter = unlabeled // self.batch_size + 2
+
         if self.store_results:
-            self._prepare_results_arrays(X_test, y_test)
+            self._prepare_results_arrays(X_test, y_test, n_iter)
 
-        for iteration in count(start=1):
-            if np.flatnonzero(~self.data.labeled_mask).shape[0] == 0:
-                break
-
+        for i in range(1, n_iter):
             samples_indices = self.selector(
                 self.data.X_train, self.data.labeled_mask, self.batch_size
             )
@@ -62,14 +72,15 @@ class ActiveLearner:
             )
 
             if self.store_results:
-                self._store_results(X_test, iteration)
+                self._store_results(X_test, i)
 
-    def _prepare_results_arrays(self, X_test: np.ndarray, y_test: np.ndarray) -> None:
-        unlabeled = int(np.flatnonzero(~self.data.labeled_mask).shape[0])
-        n_total = unlabeled // self.batch_size + 2
+            if ctx is not None:
+                ctx.proxy[ctx.learner_id] = {"total": n_iter - 1, "completed": i}
+                ctx.event.set()
 
+    def _prepare_results_arrays(self, X_test: np.ndarray, y_test: np.ndarray, n_iter: int) -> None:
         self.results = ExperimentResults(
-            y_test=y_test, labeled_ratio=[0] * n_total, proba=np.empty((n_total, y_test.shape[0]))
+            y_test=y_test, labeled_ratio=[0] * n_iter, proba=np.empty((n_iter, y_test.shape[0]))
         )
 
         self._store_results(X_test, 0)
