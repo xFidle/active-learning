@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 
-from src.active_learning.selector import SelectorName, resolve_selector
+from src.active_learning.selector import Selector, SelectorName, resolve_selector
 from src.config import register_config
 from src.models.classifier import Classifier, resolve_classifier
 from src.models.forest.forest import RandomForest
@@ -19,15 +19,23 @@ class ExperimentResults:
 
 @register_config(
     name="active_learner",
+    field_mappings={"_selector_name": "selector"},
     field_parsers={"classifier": lambda name, parser: resolve_classifier(name, parser)},
     field_serializers={"classifier": lambda classifier: classifier.name},
 )
 @dataclass
 class ActiveLearnerConfig:
     classifier: Classifier = field(default_factory=RandomForest)
-    selector_name: SelectorName = "uncertainty"
+    _selector_name: SelectorName = "uncertainty"
+    _selector: Selector | None = None
     batch_size: int = 10
     should_store_results: bool = True
+
+    @property
+    def selector(self) -> Selector:
+        if self._selector is None:
+            return resolve_selector(self._selector_name, self.classifier)
+        return self._selector
 
 
 @dataclass
@@ -46,7 +54,7 @@ class MultiprocessingContext:
 class ActiveLearner:
     def __init__(self, config: ActiveLearnerConfig, data: LearningData) -> None:
         self._classifier = config.classifier
-        self._selector = resolve_selector(config.selector_name, self._classifier)
+        self._selector = config.selector
         self._batch_size = config.batch_size
         self._should_store_results = config.should_store_results
         self._data = data
