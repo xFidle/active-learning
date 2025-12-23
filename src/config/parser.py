@@ -57,9 +57,7 @@ class ConfigParser:
             key = field_mappings.get(field.name, field.name)
             value = getattr(config_class, field.name)
 
-            if isinstance(value, bool):
-                value = str(value).lower()
-            elif isinstance(value, Path):
+            if isinstance(value, Path):
                 value = str(value)
             elif isinstance(value, DataclassInstance):
                 value = ConfigParser._get_class_fields(value)
