@@ -3,7 +3,10 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.optimize import minimize
 
+from src.config.base import register_config
 
+
+@register_config("svm")
 @dataclass
 class SVMConfig:
     learning_rate: float = 0.1
