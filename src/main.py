@@ -19,7 +19,7 @@ def main():
     x = x.to_numpy()
     y = y.to_numpy()
 
-    tester = LearnerTester(learner_config, tester_config, config_parser)
+    tester = LearnerTester(learner_config, tester_config)
     tester.run(x, y)
 
 

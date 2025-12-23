@@ -1,12 +1,13 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from multiprocessing import Queue
 from typing import Any
 
 import numpy as np
 
 from src.active_learning.selector import SelectorName, resolve_selector
-from src.config import ConfigParser, register_config
-from src.models.classifier import ClassifierName, resolve_classifier
+from src.config import register_config
+from src.models.classifier import Classifier, resolve_classifier
+from src.models.forest.forest import RandomForest
 
 
 @dataclass
@@ -16,10 +17,14 @@ class ExperimentResults:
     proba: np.ndarray
 
 
-@register_config(name="active_learner")
+@register_config(
+    name="active_learner",
+    field_parsers={"classifier": lambda name, parser: resolve_classifier(name, parser)},
+    field_serializers={"classifier": lambda classifier: classifier.name},
+)
 @dataclass
 class ActiveLearnerConfig:
-    classifier_name: ClassifierName = "forest"
+    classifier: Classifier = field(default_factory=RandomForest)
     selector_name: SelectorName = "uncertainty"
     batch_size: int = 10
     should_store_results: bool = True
@@ -39,8 +44,8 @@ class MultiprocessingContext:
 
 
 class ActiveLearner:
-    def __init__(self, config: ActiveLearnerConfig, data: LearningData, p: ConfigParser) -> None:
-        self._classifier = resolve_classifier(config.classifier_name, p)
+    def __init__(self, config: ActiveLearnerConfig, data: LearningData) -> None:
+        self._classifier = config.classifier
         self._selector = resolve_selector(config.selector_name, self._classifier)
         self._batch_size = config.batch_size
         self._should_store_results = config.should_store_results

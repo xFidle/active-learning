@@ -51,9 +51,7 @@ class LearningBatch:
 
 
 class LearnerTester:
-    def __init__(
-        self, learner_config: ActiveLearnerConfig, config: TesterConfig, p: ConfigParser
-    ) -> None:
+    def __init__(self, learner_config: ActiveLearnerConfig, config: TesterConfig) -> None:
         self._learner_config = learner_config
         self._save_dir = Path(config.save_dir)
         self._n_splits = config.n_splits
@@ -61,7 +59,6 @@ class LearnerTester:
         self._labeled_ratio = config.labeled_ratio
         self._thresholds = config.thresholds
         self._tester_rng = np.random.default_rng(config.seed)
-        self._p = p
 
     def run(self, X: np.ndarray, y: np.ndarray) -> None:
         if not self._learner_config.should_store_results:
@@ -126,7 +123,6 @@ class LearnerTester:
                                 batch.data[i],
                                 batch.input[i],
                                 batch.target[i],
-                                self._p,
                                 MultiprocessingContext(learner_id, update_queue),
                             )
                         )
@@ -205,9 +201,8 @@ class LearnerTester:
         learning_data: LearningData,
         X_test: np.ndarray,
         y_test: np.ndarray,
-        p: ConfigParser,
         ctx: MultiprocessingContext,
     ) -> ExperimentResults:
-        learner = ActiveLearner(self._learner_config, learning_data, p)
+        learner = ActiveLearner(self._learner_config, learning_data)
         learner.loop(X_test, y_test, ctx)
         return learner.results
