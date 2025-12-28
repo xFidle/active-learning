@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from scipy.optimize import minimize
+from scipy.special import expit
 
 from src.config.base import register_config
 
@@ -65,7 +66,7 @@ class SVM:
             raise ValueError("Model not trained. Call fit() first.")
 
         decision = self._decision_function(X)
-        proba_class_1 = 1 / (1 + np.exp(self.platt_a * decision + self.platt_b))
+        proba_class_1 = expit(-(self.platt_a * decision + self.platt_b))
         proba_class_0 = 1 - proba_class_1
         return np.column_stack([proba_class_0, proba_class_1])
 
@@ -83,7 +84,7 @@ class SVM:
 
         def neg_log_likelihood(params: np.ndarray) -> float:
             a, b = params
-            pred_proba = 1 / (1 + np.exp(a * decision_values + b))
+            pred_proba = expit(-(a * decision_values + b))
             pred_proba = np.clip(pred_proba, 1e-15, 1 - 1e-15)
             nll = -np.sum(targets * np.log(pred_proba) + (1 - targets) * np.log(1 - pred_proba))
             return nll
