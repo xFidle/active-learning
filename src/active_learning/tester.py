@@ -12,6 +12,8 @@ from sklearn.metrics import average_precision_score, precision_recall_curve
 from sklearn.model_selection import RepeatedStratifiedKFold
 
 from src.config import register_config
+from src.initializer.cluster import ClusterInitializer
+from src.initializer.initializer import Initializer, resolve_initializer
 from src.utils.progress_bar import setup_progress_bars
 
 from .learner import (
@@ -25,7 +27,11 @@ from .learner import (
 logger = logging.getLogger(__name__)
 
 
-@register_config(name="tester")
+@register_config(
+    name="tester",
+    field_parsers={"initializer": lambda name, parser: resolve_initializer(name, parser)},
+    field_serializers={"initializer": lambda initializer: initializer.name},
+)
 @dataclass
 class TesterConfig:
     save_dir: str = "results"
@@ -34,6 +40,7 @@ class TesterConfig:
     labeled_ratio: float = 0.25
     seed: int = 42
     thresholds: list[float] = field(default_factory=lambda: [0.25, 0.3, 0.4, 0.5, 0.75, 1.0])
+    initializer: Initializer = field(default_factory=ClusterInitializer)
 
 
 @dataclass
@@ -59,6 +66,7 @@ class LearnerTester:
         self._labeled_ratio = config.labeled_ratio
         self._thresholds = config.thresholds
         self._tester_rng = np.random.default_rng(config.seed)
+        self._initializer = config.initializer
 
     def run(self, X: np.ndarray, y: np.ndarray) -> None:
         if not self._learner_config.should_store_results:
@@ -96,9 +104,7 @@ class LearnerTester:
 
             n_train = X_train.shape[0]
             n_labeled = int(n_train * self._labeled_ratio)
-            labeled_mask = np.zeros(n_train, dtype=bool)
-            labeled_mask[:n_labeled] = True
-            self._tester_rng.shuffle(labeled_mask)
+            labeled_mask = self._initializer(X_train, y_train, n_labeled, self._tester_rng)
 
             data.append(LearningData(X_train, y_train, labeled_mask))
             inputs.append(X_test)
