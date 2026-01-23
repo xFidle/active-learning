@@ -33,7 +33,7 @@ should_store_results = true
 [tester]
 save_dir = "results/forest_random_uncertainty"
 n_splits = 5
-n_repeats = 3
+n_repeats = 5
 labeled_ratio = 0.25
 seed = 42
 thresholds = [
