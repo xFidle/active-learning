@@ -1,0 +1,47 @@
+[cluster_initializer]
+clusters = 2
+center_ratio = 0.6
+border_ratio = 0.4
+
+[logging]
+level = "INFO"
+output = [
+    "stdout",
+]
+format_string = "%(levelname)s [%(asctime)s]: %(filename)s:%(funcName)s - %(message)s"
+
+[forest]
+n_trees = 100
+multiprocessing = false
+seed = 42
+
+[forest.tree_config]
+max_depth = 10
+min_samples_split = 2
+
+[svm]
+learning_rate = 0.01
+penalty = 1
+iter_count = 1000
+
+[active_learner]
+classifier = "forest"
+selector = "uncertainty"
+batch_size = 10
+should_store_results = true
+
+[tester]
+save_dir = "results/forest_cluster_uncertainty"
+n_splits = 5
+n_repeats = 3
+labeled_ratio = 0.25
+seed = 42
+thresholds = [
+    0.25,
+    0.3,
+    0.4,
+    0.5,
+    0.75,
+    1.0,
+]
+initializer = "cluster"
