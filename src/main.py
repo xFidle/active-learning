@@ -22,7 +22,7 @@ def main():
     tester_config = config_parser.get(TesterConfig)
     setup_root_logger(logger_config)
 
-    df = pd.read_csv("data/active_learning/flowers.csv")
+    df = pd.read_csv("data/active_learning/flowers.csv")  # pyright: ignore
 
     x, y = df.iloc[:, :-1], df.iloc[:, -1]
 

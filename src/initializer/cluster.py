@@ -32,9 +32,8 @@ class ClusterInitializer:
         self.center_ratio = config.center_ratio
         self.border_ratio = config.border_ratio
 
-    def __call__(
-        self, x: np.ndarray, y: np.ndarray, n_labeled: int, rng: np.random.Generator
-    ) -> np.ndarray:
+    def __call__(self, x: np.ndarray, y: np.ndarray, n_labeled: int, seed: int) -> np.ndarray:
+        rng = np.random.default_rng(seed)
         while True:
             labeled_mask = self._select_instances(x, n_labeled, rng)
 

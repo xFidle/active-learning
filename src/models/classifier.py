@@ -8,6 +8,7 @@ from .forest.forest import RandomForest, RandomForestConfig
 from .svm.svm import SVM, SVMConfig
 
 type ClassifierName = Literal["svm", "forest"]
+CLASSIFIERS = ["svm", "forest"]
 
 
 class Classifier(Protocol):

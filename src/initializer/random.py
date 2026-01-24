@@ -9,9 +9,8 @@ if TYPE_CHECKING:
 class RandomInitializer:
     name: "InitializerName" = "random"
 
-    def __call__(
-        self, x: np.ndarray, y: np.ndarray, n_labeled: int, rng: np.random.Generator
-    ) -> np.ndarray:
+    def __call__(self, x: np.ndarray, y: np.ndarray, n_labeled: int, seed: int) -> np.ndarray:
+        rng = np.random.default_rng(seed)
         n_samples = x.shape[0]
 
         labeled_mask = np.zeros(n_samples, dtype=bool)

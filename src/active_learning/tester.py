@@ -64,8 +64,8 @@ class LearnerTester:
         self._n_splits = config.n_splits
         self._n_repeats = config.n_repeats
         self._labeled_ratio = config.labeled_ratio
+        self._seed = config.seed
         self._thresholds = config.thresholds
-        self._tester_rng = np.random.default_rng(config.seed)
         self._initializer = config.initializer
 
     def run(self, X: np.ndarray, y: np.ndarray) -> None:
@@ -97,14 +97,17 @@ class LearnerTester:
         inputs: list[np.ndarray] = []
         targets: list[np.ndarray] = []
 
-        rskf = RepeatedStratifiedKFold(n_splits=self._n_splits, n_repeats=self._n_repeats)
+        rskf = RepeatedStratifiedKFold(
+            n_splits=self._n_splits, n_repeats=self._n_repeats, random_state=self._seed
+        )
         for train_index, test_index in rskf.split(X, y):
             X_train, y_train = X[train_index, :], y[train_index]
             X_test, y_test = X[test_index, :], y[test_index]
 
             n_train = X_train.shape[0]
             n_labeled = int(n_train * self._labeled_ratio)
-            labeled_mask = self._initializer(X_train, y_train, n_labeled, self._tester_rng)
+
+            labeled_mask = self._initializer(X_train, y_train, n_labeled, self._seed)
 
             data.append(LearningData(X_train, y_train, labeled_mask))
             inputs.append(X_test)

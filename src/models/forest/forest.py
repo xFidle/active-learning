@@ -34,16 +34,16 @@ class RandomForest:
         self._n_trees = config.n_trees
         self._tree_config = config.tree_config
         self._multiprocessing = config.multiprocessing
-        self._forest_rng = np.random.default_rng(config.seed)
+        self._seed = config.seed
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
-        if len(self._trees) == 0:
-            self._trees = []
-            self._selected_features = []
+        self._trees = []
+        self._selected_features = []
+        rng = np.random.default_rng(self._seed)
 
         self.classes = np.unique(y_train)
 
-        seeds = self._forest_rng.integers(0, 2**32 - 1, size=self._n_trees)
+        seeds = rng.integers(0, 2**32 - 1, size=self._n_trees)
         if self._multiprocessing:
             with ProcessPoolExecutor() as executor:
                 result = executor.map(

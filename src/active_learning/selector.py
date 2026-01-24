@@ -4,8 +4,8 @@ import numpy as np
 
 from src.models.classifier import Classifier
 
-
 type SelectorName = Literal["uncertainty", "diversity", "random"]
+SELECTORS = ["uncertainty", "diversity", "random"]
 
 
 class Selector(Protocol):
@@ -60,8 +60,8 @@ class DiversitySelector:
 class RandomSelector:
     name: SelectorName = "random"
 
-    def __init__(self, random_state: int | None = None) -> None:
-        self.rng = np.random.default_rng(random_state)
+    def __init__(self, seed: int) -> None:
+        self.rng = np.random.default_rng(seed)
 
     def __call__(
         self, X_pool: np.ndarray, labeled_mask: np.ndarray, batch_size: int = 5
@@ -75,11 +75,11 @@ class RandomSelector:
         return unlabeled_indices[relative_indices]
 
 
-def resolve_selector(name: SelectorName, classifier: Classifier) -> Selector:
+def resolve_selector(name: SelectorName, classifier: Classifier, seed: int) -> Selector:
     match name:
         case "uncertainty":
             return UncertaintySelector(classifier)
         case "diversity":
             return DiversitySelector()
         case "random":
-            return RandomSelector()
+            return RandomSelector(seed)
