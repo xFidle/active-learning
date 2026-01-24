@@ -18,6 +18,7 @@ class ClusterInitializerConfig:
     pca_components: int | None = None
     center_ratio: float = 0.6
     border_ratio: float = 0.4
+    seed: int = 42
 
 
 class ClusterInitializer:
@@ -31,9 +32,10 @@ class ClusterInitializer:
         self.pca_components = config.pca_components
         self.center_ratio = config.center_ratio
         self.border_ratio = config.border_ratio
+        self.seed = config.seed
 
-    def __call__(self, x: np.ndarray, y: np.ndarray, n_labeled: int, seed: int) -> np.ndarray:
-        rng = np.random.default_rng(seed)
+    def __call__(self, x: np.ndarray, y: np.ndarray, n_labeled: int) -> np.ndarray:
+        rng = np.random.default_rng(self.seed)
         while True:
             labeled_mask = self._select_instances(x, n_labeled, rng)
 

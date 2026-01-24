@@ -107,7 +107,7 @@ class LearnerTester:
             n_train = X_train.shape[0]
             n_labeled = int(n_train * self._labeled_ratio)
 
-            labeled_mask = self._initializer(X_train, y_train, n_labeled, self._seed)
+            labeled_mask = self._initializer(X_train, y_train, n_labeled)
 
             data.append(LearningData(X_train, y_train, labeled_mask))
             inputs.append(X_test)

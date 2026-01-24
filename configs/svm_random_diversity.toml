@@ -2,6 +2,10 @@
 clusters = 2
 center_ratio = 0.6
 border_ratio = 0.4
+seed = 42
+
+[random_initalizer]
+seed = 42
 
 [logging]
 level = "INFO"
