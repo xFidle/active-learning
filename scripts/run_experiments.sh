@@ -29,5 +29,5 @@ fi
 
 for config in $pattern; do
   echo "Running $config"
-  # uv run python -m src.main --config "$config"
+  uv run python -m src.main --config "$config"
 done
