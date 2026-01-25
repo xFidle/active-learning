@@ -126,9 +126,45 @@ SVM, co umożliwia przekształcenie ich w oszacowania prawdopodobieństwa:
 \noindent gdzie parametry $A$ i $B$ wyznaczane są poprzez minimalizację ujemnej
 logarytmicznej funkcji wiarygodności na zbiorze treningowym.
 
-\section{Zbiór danych}
+\section{Zbiory danych}
+\subsection{Pomocniczy} W ramach prostych testów sprawdzających poprawność
+implementacji naszych algorytmów wykorzystano odniesienie do wartości zwracanej
+przez klasyfikatory opracowane w bilbliotece \textit{SKLEARN}. Do testów
+wykorzystano zbiór danych dotyczący
+\href{https://archive.ics.uci.edu/dataset/109/wine}{jakości win}. Zadanie
+sprowadzono do klasyfikacji binarnej \textendash{} jakość mniejsza niż 6 wskazuje na
+klasę 0, a większa na 1. Zbiór zawiera 1599 przykładów i 11 atrybutów, z czego
+wszystkie są ciągłe.
 
-\section{Wyniki eksperymentów}
+\subsection{Główny}
+Jako główny zbiór danych wykorzystywany w pętli uczenia aktywnego wybrano
+\href{https://www.kaggle.com/datasets/imsparsh/flowers-dataset/data}{zestaw}
+zawierający zdjęcia kwiatów. Pierwotnie podjęto taką decyzję, ponieważ założono,
+że przykłady będą etykietowane manualnie co jest łatwiejsze do zrealizowania
+patrząc na zdjęcie, a nie wektor cech. Jak się później okazało, takie podejście
+jest niemożliwe do zrealizowania ze względów ograniczeń czasowych jeżeli chcemy
+przeprowadzić dokładne eksperymenty bazujące na $n$-krotnych powtórzeniach
+walidacji krzyżowej. Przed przystąpieniem do przeprowadzenia eksperymentów
+został zbiór został przetworzony w następujący sposób:
+
+\begin{itemize}
+	\item Pozostawienie wyłącznie próbek zklasyfikowanych jako mniszki lekarskie
+	      lub słoneczniki \textendash{} ograniczenie się do klasyfikacji binarnej;
+	\item Usunięcie prawie wszystkich próbek słoneczników (ostateczny stosunek
+	      klas to 1:20) \textendash{} stworzenie niezbalansowanego zbioru danych;
+	\item Zamaskowanie etykiet 75\% przykładów (stają się one całkowicie
+	      niewidoczne dla modelu) \textendash{} symulacja sytuacji braku etykiet;
+	\item  Przetworzenie zdjęcia do postaci reprezentacji wektorowej z
+	      wykorzystaniem wcześniej wytrenowanej sieci neuronowej \textit{ResNet50}.
+\end{itemize}
+
+Ostatecznie zbiór danych składa się z 680 przykładów \textendash{} 30
+słoneczników (klasa 1) i 650 mniszków lekarskich (klasa 0). Każdy przykład ma
+dokładnie 2048 atrybutów (wszystkie ciągłe).
+
+\section{Eksperymenty}
+\subsection{Porównanie z \textit{SKLEARN}}
+
 
 \section{Opis wykorzystanych narzędzi}
 
