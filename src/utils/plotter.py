@@ -14,7 +14,7 @@ from src.models.classifier import ClassifierName
 @register_config(name="plotter")
 @dataclass
 class PlotterConfig:
-    results: str = "results"
+    results: str = "results/plots"
 
 
 class Plotter:
@@ -40,7 +40,7 @@ class Plotter:
         plt.ylabel("PR AUC")
         plt.legend()
         plt.grid(visible=True)  # pyright: ignore
-        plt.savefig(self._results / f"{classifier}-{initializer}-learning-curve.png")
+        plt.savefig(self._results / f"{classifier}-{initializer}-learning.png")
 
     def plot_pr_auc(
         self,
@@ -64,4 +64,4 @@ class Plotter:
         plt.ylabel("Precision")
         plt.legend()
         plt.grid(visible=True)  # pyright: ignore
-        plt.savefig(self._results / Path(dir_name) / "precision-recall-curve.png")
+        plt.savefig(self._results / f"{dir_name}-pr.png")
