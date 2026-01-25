@@ -34,6 +34,9 @@ class SVM:
         self.platt_a: float | None = None
         self.platt_b: float | None = None
 
+    def set_rng(self, seed: int) -> None:
+        pass
+
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
         _, n_features = X_train.shape
 

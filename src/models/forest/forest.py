@@ -19,7 +19,6 @@ class RandomForestConfig:
     tree_config: CARTConfig = field(default_factory=CARTConfig)
     n_trees: int = 100
     multiprocessing: bool = False
-    seed: int = 42
 
 
 class RandomForest:
@@ -34,16 +33,17 @@ class RandomForest:
         self._n_trees = config.n_trees
         self._tree_config = config.tree_config
         self._multiprocessing = config.multiprocessing
-        self._seed = config.seed
+
+    def set_rng(self, seed: int) -> None:
+        self._rng = np.random.default_rng(seed)
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
         self._trees = []
         self._selected_features = []
-        rng = np.random.default_rng(self._seed)
 
         self.classes = np.unique(y_train)
 
-        seeds = rng.integers(0, 2**32 - 1, size=self._n_trees)
+        seeds = self._rng.integers(0, 2**32 - 1, size=self._n_trees)
         if self._multiprocessing:
             with ProcessPoolExecutor() as executor:
                 result = executor.map(

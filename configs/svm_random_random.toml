@@ -2,10 +2,6 @@
 clusters = 2
 center_ratio = 0.6
 border_ratio = 0.4
-seed = 42
-
-[random_initalizer]
-seed = 42
 
 [logging]
 level = "INFO"
@@ -17,7 +13,6 @@ format_string = "%(levelname)s [%(asctime)s]: %(filename)s:%(funcName)s - %(mess
 [forest]
 n_trees = 100
 multiprocessing = false
-seed = 42
 
 [forest.tree_config]
 max_depth = 10
@@ -31,7 +26,6 @@ iter_count = 1000
 [active_learner]
 classifier = "svm"
 selector = "random"
-selector_seed = 42
 batch_size = 10
 should_store_results = true
 

@@ -1,6 +1,7 @@
 import logging
 import os
 from concurrent.futures import Future, ProcessPoolExecutor
+from copy import deepcopy
 from dataclasses import dataclass, field
 from multiprocessing import Manager, Queue
 from pathlib import Path
@@ -107,7 +108,7 @@ class LearnerTester:
             n_train = X_train.shape[0]
             n_labeled = int(n_train * self._labeled_ratio)
 
-            labeled_mask = self._initializer(X_train, y_train, n_labeled)
+            labeled_mask = self._initializer(X_train, y_train, n_labeled, self._seed)
 
             data.append(LearningData(X_train, y_train, labeled_mask))
             inputs.append(X_test)
@@ -117,6 +118,8 @@ class LearnerTester:
 
     def _process_data(self, batch: LearningBatch) -> list[ExperimentResults]:
         n_learners = len(batch.data)
+        master_rng = np.random.default_rng(self._seed)
+        seeds = master_rng.integers(0, 2**32 - 1, size=n_learners)
         with setup_progress_bars() as progress:
             with Manager() as manager:
                 futures: list[Future[ExperimentResults]] = []
@@ -132,6 +135,7 @@ class LearnerTester:
                                 batch.data[i],
                                 batch.input[i],
                                 batch.target[i],
+                                int(seeds[i]),
                                 MultiprocessingContext(learner_id, update_queue),
                             )
                         )
@@ -210,8 +214,12 @@ class LearnerTester:
         learning_data: LearningData,
         X_test: np.ndarray,
         y_test: np.ndarray,
+        learner_seed: int,
         ctx: MultiprocessingContext,
     ) -> ExperimentResults:
-        learner = ActiveLearner(self._learner_config, learning_data)
+        local_config = deepcopy(self._learner_config)
+        local_config.seed = learner_seed
+        local_config.classifier.set_rng(learner_seed)
+        learner = ActiveLearner(local_config, learning_data)
         learner.loop(X_test, y_test, ctx)
         return learner.results

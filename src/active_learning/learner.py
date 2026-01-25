@@ -27,15 +27,15 @@ class ExperimentResults:
 class ActiveLearnerConfig:
     classifier: Classifier = field(default_factory=RandomForest)
     _selector_name: SelectorName = "uncertainty"
-    _selector_seed: int = 42
     _selector: Selector | None = None
     batch_size: int = 10
+    seed: int = 42
     should_store_results: bool = True
 
     @property
     def selector(self) -> Selector:
         if self._selector is None:
-            return resolve_selector(self._selector_name, self.classifier, self._selector_seed)
+            return resolve_selector(self._selector_name, self.classifier, self.seed)
         return self._selector
 
 
