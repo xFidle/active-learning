@@ -1,0 +1,136 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{indentfirst}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\geometry{margin=0.75in}
+\setlength{\parskip}{6pt}
+\linespread{1.25}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+
+\begin{document}
+
+\title{[UMA] \textendash{} Dokumentacja końcowa projektu \\ \Large Uczenie
+	aktywne (temat nr 1) } \author{ Michał Szwejk \and Damian D'Souza } \date{}
+\maketitle
+
+\section{Streszczenie założeń dokumnetacji wstępnej} Głównym zadaniem projektu
+było przygotowanie programu realizującego schemat uczenia aktywnego. Projekt
+zakładał opracowanie dwóch modeli uczenia maszynowego \textendash{} wybrano
+\textit{Las Losowy} i \textit{SVM} \textendash{} a następnie porównanie ich
+działania w środowisku uczenia aktywnego.
+
+W założeniach wstępnych wyszczególniono także proces przygotowania danych do
+treningu. Określono, że testowany zbiór danych zostanie tak spreparowany, aby
+stał się on mocno niezrównoważony \textendash{} klasa mniejszościowa powinna
+występować kilknaście razy mniej niż większościowa. Pondto wyróżniono, że ze
+zbioru danych zostanie usunięte większość etykiet w celu odpowiedniego
+przygotowania do procesu uczenia aktywnego.
+
+Jako główną miarę ewaluacji jakości modelu wykorzystano pole pod krzywą
+\textit{precision-recall} (PR AUC), ponieważ skupia się ona na jakości predykcji
+klasy pozytywnej, a nie na licznych przykładach klasy większościowej.
+
+\section{Uczenie aktywne}
+Uczenie aktywne to metoda, która pozwala algorytmom uczenia maszynowego osiągać
+lepsze wyniki w przypadkach gdy zbiór danych jest mocno niezbalansowany i
+zawiera wiele brakujących etykiet. Model sam, bez ingerencji użytkownika,
+wybiera przykłady uczące, które według niego są najbardziej wartościowe dla
+treningu. Następnie zewnętrzne źródło (zazwyczaje ekspert domenowy) manualnie
+etykietuje wyznaczone próbki. Takie podejście pozwala minimializować potrzebę
+posiadania dużego zbioru danych nie poświęcając przy tym skuteczności modelu.
+
+\newpage
+
+Uczenie aktywne jest procesem iteracyjnym. Pseudokod metody może być przedstawiony
+następująco:
+\begin{algorithm}
+	\caption{Uczenie aktywne}
+	\begin{algorithmic}[1]
+		\STATE{Wybierz początkowy zbiór przykładów trenujących $T$ z całego
+			zbioru danych $P$;}
+		\STATE{$P := P - T$;}
+		\STATE{Poetykietuj przykłady ze zbioru $T$;}
+		\REPEAT{}
+		\STATE{Przygotuj model $h$ ucząc się na przykładach ze zbioru $T$;}
+		\STATE{Wybierz nowe przykłady $Q$ ze zbioru $P$ bazując na wcześniej
+			przygotowanym modelu $h$;}
+		\STATE{Poetykietuj dane ze zbioru $Q$;}
+		\STATE{$T := T \cup Q$};
+		\STATE{$P := P \setminus Q$};
+		\UNTIL{Poetykietowano 100\%  danych lub spełniono zadane kryterium
+			stopu;}
+		\RETURN{$h$}.
+	\end{algorithmic}
+\end{algorithm}
+
+Głownym ograniczeniem uczenia aktywnego jest długotrwały proces etykietowania
+danych, który wymaga możliwie jak najepszej ``wyroczni''. Dodatkowo proces może
+być kosztowny, ponieważ w każdej iteracji trzeba od nowa dopasowywać model do
+danych.
+
+
+\section{Opis funkcjonalny}
+
+\section{Opis algorytmów} \subsection{Random forest} Las losowy jest algorytmem,
+który generuje wiele różnych drzew w procesie uczenia i przypisuje klasy, będące
+dominantą wyników poszczególnych drzew. W odróżnieniu od pojedynczego drzewa
+tendencja modelu do nadmiernego dopasowania jest dużo mniejsza. Każde drzewo
+trenowane jest na tylu przykładach ile jest w zbiorze trenującym, jednakże
+losowane są one ze zwracaniem. Ponadto ograniczony jest zestaw atrybutów,
+wybierane jest ich wyłącznie $\sqrt{|A|}$ (bez zwracania), gdzie $A$
+\textendash{} to zbiór atrybutów.
+
+Każde drzewo wchodzące w skład lasu losowego jest drzewem typu \textit{CART}.
+Reguły podziału w poszczególnych węzłach są konstruowane w taki sposób, aby po
+podziale minimalizować wartość \textbf{zanieczyszczenia Gini’ego} (w przypadku
+zadania klasyfikacji). Miara ta jest dana wzorem: \begin{equation*} Gini(x) =
+	\sum_{i=0}^{|C|} 1-p_i^2 \end{equation*} gdzie $p_i$ \textendash{}
+prawdopodobieństwo $i$-tej klasy w węźle, a $C$ \textendash{} zbiór klas.
+
+\subsection{SVM} Maszyna wektorów nośnych jest algorytmem klasyfikacji, który
+wyznacza optymalną hiperpłaszczyznę rozdzielającą klasy w przestrzeni cech. Dla
+problemu binarnego hiperpłaszczyzna jest definiowana przez wektor wag
+$\mathbf{w}$ i wyraz wolny $b$, a klasyfikacja nowej próbki $\mathbf{x}$ odbywa
+się na podstawie znaku funkcji decyzyjnej $f(\mathbf{x}) =
+	\mathbf{w}^T\mathbf{x} + b$.
+
+Kluczową ideą SVM jest maksymalizacja marginesu, czyli odległości między
+hiperpłaszczyzną a najbliższymi punktami każdej z klas (tzw.\ wektorami
+nośnymi). W przypadku danych nieliniowo rozdzielnych wprowadza się parametr kary
+$C$, który kontroluje kompromis między maksymalizacją marginesu a minimalizacją
+błędu klasyfikacji. Proces optymalizacji wag może zostać przeprowadzony m.in.\
+metodą spadku gradientu, poprzez minimalizację funkcji celu zawierającej
+\textbf{funkcję straty zawiasowej}:
+
+\begin{equation*} L(\mathbf{w}, b) = \frac{1}{2}\|\mathbf{w}\|^2 + C
+	\sum_{i=1}^{n} \max(0, 1 - y_i(\mathbf{w}^T\mathbf{x}_i + b)) \end{equation*}
+
+\noindent gdzie $y_i \in \{-1, 1\}$ \textendash{} etykieta $i$-tej próbki, a $C$
+\textendash{} parametr kary.
+
+W sytuacjach wymagających probabilistycznego wyjścia modelu (co jest kluczowe
+np.\ w uczeniu aktywnym), możliwe jest zastosowanie metody \textbf{Platta}.
+Pozwala ona na dopasowanie funkcji sigmoidalnej do wartości funkcji decyzyjnej
+SVM, co umożliwia przekształcenie ich w oszacowania prawdopodobieństwa:
+
+\begin{equation*} P(y=1|\mathbf{x}) = \frac{1}{1 + \exp(A \cdot f(\mathbf{x}) +
+		B)} \end{equation*}
+
+\noindent gdzie parametry $A$ i $B$ wyznaczane są poprzez minimalizację ujemnej
+logarytmicznej funkcji wiarygodności na zbiorze treningowym.
+
+\section{Zbiór danych}
+
+\section{Wyniki eksperymentów}
+
+\section{Opis wykorzystanych narzędzi}
+
+\end{document}
+
