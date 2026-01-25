@@ -20,6 +20,7 @@ class PlotterConfig:
 class Plotter:
     def __init__(self, config: PlotterConfig) -> None:
         self._results = Path(config.results)
+        self._results.mkdir(exist_ok=True, parents=True)
 
     def plot_learning_curves(
         self, classifier: ClassifierName, initializer: InitializerName
