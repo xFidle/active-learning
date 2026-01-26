@@ -14,7 +14,7 @@ from src.models.classifier import ClassifierName
 @register_config(name="plotter")
 @dataclass
 class PlotterConfig:
-    results: str = "results/plots"
+    results: str = "results"
 
 
 class Plotter:
@@ -25,6 +25,8 @@ class Plotter:
     def plot_learning_curves(
         self, classifier: ClassifierName, initializer: InitializerName
     ) -> None:
+        plt.style.use("bmh")  # pyright: ignore
+        mean: pd.Series | None = None
         for path in self._results.glob("*"):
             elements = path.stem.split("_")
             if not path.is_dir() or elements[0] != classifier or elements[1] != initializer:
@@ -36,12 +38,24 @@ class Plotter:
                 df["mean"],
             )
             plt.plot(labeled_ratio, mean, label=elements[2])
+
+        assert mean is not None
+        mean_np = mean.to_numpy()
+        plt.hlines(
+            y=mean_np[-1],
+            xmin=0,
+            xmax=100,
+            colors=["gray"],
+            linestyles="dashed",
+            label="passive",
+            linewidth=1.0,
+        )
         plt.title(f"{classifier} Active Learning Curves ({initializer} initalization)")
         plt.xlabel("% Data")
         plt.ylabel("PR AUC")
         plt.legend()
         plt.grid(visible=True)  # pyright: ignore
-        plt.savefig(self._results / f"{classifier}-{initializer}-learning.png")
+        plt.savefig(self._results / "plots" / f"{classifier}-{initializer}-learning.png")
 
     def plot_pr_auc(
         self,
@@ -50,6 +64,7 @@ class Plotter:
         selector: SelectorName,
         ths: list[str],
     ) -> None:
+        plt.style.use("bmh")  # pyright: ignore
         dir_name = f"{classifier}_{initializer}_{selector}"
         for file in (self._results / dir_name).glob("*.csv"):
             elements = file.stem.split("-")
@@ -65,4 +80,4 @@ class Plotter:
         plt.ylabel("Precision")
         plt.legend()
         plt.grid(visible=True)  # pyright: ignore
-        plt.savefig(self._results / f"{dir_name}-pr.png")
+        plt.savefig(self._results / "plots" / f"{dir_name}-pr.png")
