@@ -105,9 +105,11 @@ Kluczową ideą SVM jest maksymalizacja marginesu, czyli odległości między
 hiperpłaszczyzną a najbliższymi punktami każdej z klas (tzw.\ wektorami
 nośnymi). W przypadku danych nieliniowo rozdzielnych wprowadza się parametr kary
 $C$, który kontroluje kompromis między maksymalizacją marginesu a minimalizacją
-błędu klasyfikacji. Proces optymalizacji wag może zostać przeprowadzony m.in.\
-metodą spadku gradientu, poprzez minimalizację funkcji celu zawierającej
-\textbf{funkcję straty zawiasowej}:
+błędu klasyfikacji. W implementacji zastosowano standaryzację cech (średnia 0,
+odchylenie 1), co stabilizuje uczenie i pozwala zachować porównywalną skalę
+atrybutów. Uczenie wag realizowane jest metodą SGD w wariancie Pegasos z
+malejącym krokiem uczenia oraz tasowaniem próbek w każdej epoce, minimalizując
+funkcję celu zawierającą \textbf{funkcję straty zawiasowej}:
 
 \begin{equation*} L(\mathbf{w}, b) = \frac{1}{2}\|\mathbf{w}\|^2 + C
 	\sum_{i=1}^{n} \max(0, 1 - y_i(\mathbf{w}^T\mathbf{x}_i + b)) \end{equation*}
