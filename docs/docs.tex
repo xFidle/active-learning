@@ -77,6 +77,121 @@ danych.
 
 
 \section{Opis funkcjonalny}
+System składa się z dwóch głównych programów uruchamianych z linii poleceń:
+\texttt{src.main} realizującego pętlę uczenia aktywnego oraz
+\texttt{src.process\_\allowbreak images} przygotowującego dane wejściowe na podstawie zdjęć.
+Uruchomienie odbywa się przez polecenie
+\texttt{python3 -m src.\allowbreak \textless{}moduł\textgreater{}}, gdzie nazwa
+modułu podawana jest bez rozszerzenia. Przykładowe polecenia:
+\begin{itemize}
+	\item \texttt{python3 -m src.process\_\allowbreak images}
+	\item \texttt{python3 -m src.main}
+	\item \texttt{python3 -m src.main -c configs/svm\_\allowbreak cluster\_\allowbreak random}
+\end{itemize}
+
+Instalacja zależności może być wykonana w aktywnym środowisku \texttt{venv} przy
+pomocy \texttt{pip install .}.
+
+Dla \texttt{src.main} można wskazać własny plik konfiguracyjny przy pomocy flagi
+\texttt{-c} (lub \texttt{--config}). Domyślnie ładowany jest plik
+\texttt{config.toml}, a dla przetwarzania obrazów
+\texttt{image\_\allowbreak processing\_\allowbreak config.toml}.
+Jeżeli wskazany plik nie istnieje, system tworzy go automatycznie na podstawie
+zarejestrowanych klas konfiguracyjnych.
+
+\subsection*{Konfiguracja przetwarzania obrazów}
+Konfiguracja przetwarzania danych steruje pobieraniem zbioru, ekstrakcją cech oraz
+przygotowaniem pliku wejściowego do uczenia aktywnego. W pliku znajdują się m.in.:
+\begin{itemize}
+	\item \texttt{data\_processing.output\_\allowbreak dir} \textendash{} katalog zapisu danych
+	      (np. \texttt{data/active\_\allowbreak learning});
+	\item \texttt{data\_processing.unlabeled\_\allowbreak percentage} \textendash{} odsetek
+	      przykładów, których etykiety są ukrywane;
+	\item \texttt{data\_processing.majority\_\allowbreak ratio} \textendash{} docelowy stosunek
+	      klasy większościowej do mniejszościowej;
+	\item \texttt{image\_processing.model} \textendash{} nazwa sieci CNN używanej do
+	      ekstrakcji cech (np. \texttt{resnet50});
+	\item \texttt{image\_processing.data\_\allowbreak dir} \textendash{} katalog źródłowy ze
+	      zdjęciami;
+	\item \texttt{image\_processing.force\_\allowbreak download} \textendash{} wymuszenie
+	      ponownego pobrania danych.
+\end{itemize}
+
+Przykładowa konfiguracja:
+\begin{verbatim}
+[data_processing]
+output_dir = "data/active_learning"
+unlabeled_percentage = 75
+majority_ratio = 20
+
+[image_processing]
+model = "resnet50"
+data_dir = "data/flowers/images"
+force_download = false
+\end{verbatim}
+
+\subsection*{Konfiguracja uczenia aktywnego}
+Konfiguracja uczenia aktywnego definiuje model klasyfikatora, strategię doboru
+próbek oraz parametry walidacji. Dodatkowo dostępny jest moduł
+\texttt{python3 -m src.compare\_\allowbreak with\_\allowbreak sklearn
+	\textless{}classifier\textgreater{}}, który uruchamia porównanie z
+implementacją \textit{scikit-learn}. Moduł przyjmuje argument
+\texttt{classifier} (\texttt{svm} lub \texttt{forest}) oraz korzysta z ustawień
+z sekcji \texttt{aggregator} w pliku konfiguracyjnym.
+Najważniejsze sekcje:
+\begin{itemize}
+	\item \texttt{cluster\_initializer} \textendash{} parametry inicjalizacji
+	      klastrami (np. liczba klastrów i proporcje);
+	\item \texttt{svm} oraz \texttt{forest} \textendash{} parametry modeli SVM i
+	      lasu losowego;
+	\item \texttt{active\_learner} \textendash{} wybór klasyfikatora, selektora
+	      (\texttt{random}, \texttt{diversity}, \texttt{uncertainty}) i wielkości
+	      partii;
+	\item \texttt{tester} \textendash{} liczba podziałów, powtórzeń, progi i katalog
+	      zapisu wyników;
+\end{itemize}
+
+Przykładowa konfiguracja:
+\begin{verbatim}
+[cluster_initializer]
+clusters = 2
+center_ratio = 0.6
+border_ratio = 0.4
+
+[forest]
+n_trees = 100
+multiprocessing = false
+
+[forest.tree_config]
+max_depth = 10
+min_samples_split = 2
+
+[svm]
+learning_rate = 0.1
+penalty = 100
+iter_count = 1000
+
+[active_learner]
+classifier = "forest"
+selector = "uncertainty"
+batch_size = 10
+seed = 42
+should_store_results = true
+
+[tester]
+save_dir = "results"
+n_splits = 5
+n_repeats = 3
+labeled_ratio = 0.25
+seed = 42
+thresholds = [0.25, 0.3, 0.4, 0.5, 0.75, 1.0]
+initializer = "cluster"
+
+[aggregator]
+runs = 10
+metrics = ["accuracy", "precision", "recall", "f1"]
+output = "results/compare"
+\end{verbatim}
 
 \section{Opis algorytmów} \subsection{Random forest} Las losowy jest algorytmem,
 który generuje wiele różnych drzew w procesie uczenia i przypisuje klasy, będące
