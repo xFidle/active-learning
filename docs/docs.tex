@@ -282,8 +282,25 @@ dokładnie 2048 atrybutów (wszystkie ciągłe).
 \section{Eksperymenty}
 \subsection{Porównanie z \textit{SKLEARN}}
 
-
 \section{Opis wykorzystanych narzędzi}
+W implementacji wykorzystano narzędzia i biblioteki wspierające zarówno obróbkę
+obrazów, jak i eksperymenty z uczeniem aktywnym. Projekt został napisany w języku
+Python 3.13, a środowisko uruchomieniowe może być skonfigurowane w ramach
+\texttt{venv} z instalacją zależności przez \texttt{pip}.
+
+Najważniejsze użyte technologie i biblioteki:
+\begin{itemize}
+	\item \texttt{numpy} i \texttt{pandas} \textendash{} przetwarzanie danych i
+	      przygotowanie macierzy cech;
+	\item \texttt{scikit-learn} \textendash{} metryki jakości, podziały danych oraz
+	      implementacje referencyjne do porównań;
+	\item \texttt{torch} i \texttt{torchvision} \textendash{} ekstrakcja cech z obrazów
+	      przy użyciu sieci \textit{ResNet50};
+	\item \texttt{kagglehub} \textendash{} pobieranie zbioru zdjęć kwiatów;
+	\item \texttt{ucimlrepo} \textendash{} pobieranie zbioru jakości win do testów
+	      porównawczych;
+	\item \texttt{matplotlib} \textendash{} wsparcie dla wizualizacji wyników;
+\end{itemize}
 
 \end{document}
 
