@@ -33,27 +33,42 @@ class SVM:
         self.b: float | None = None
         self.platt_a: float | None = None
         self.platt_b: float | None = None
+        self.feature_mean: np.ndarray | None = None
+        self.feature_scale: np.ndarray | None = None
+        self.rng: np.random.Generator = np.random.default_rng()
 
     def set_rng(self, seed: int) -> None:
-        pass
+        self.rng = np.random.default_rng(seed)
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
-        _, n_features = X_train.shape
+        n_samples, n_features = X_train.shape
+
+        feature_mean = X_train.mean(axis=0)
+        feature_scale = X_train.std(axis=0)
+        feature_scale = np.where(feature_scale == 0, 1.0, feature_scale)
+        self.feature_mean = feature_mean
+        self.feature_scale = feature_scale
+        X_scaled = self._standardize(X_train)
 
         w = np.zeros(n_features)
         b = 0.0
 
         y = np.where(y_train <= 0, -1, 1)
+        lambda_param = 1.0 / (self.penalty * n_samples)
+        step = 0
 
         for _ in range(self.iter_count):
-            for idx, x_i in enumerate(X_train):
+            for idx in self.rng.permutation(n_samples):
+                step += 1
+                x_i = X_scaled[idx]
                 condition = y[idx] * (np.dot(x_i, w) + b) >= 1
+                eta = self.learning_rate / (1.0 + self.learning_rate * lambda_param * step)
 
                 if condition:
-                    w -= self.learning_rate * w
+                    w = (1 - eta * lambda_param) * w
                 else:
-                    w -= self.learning_rate * (w - self.penalty * y[idx] * x_i)
-                    b -= self.learning_rate * (-self.penalty * y[idx])
+                    w = (1 - eta * lambda_param) * w + eta * y[idx] * x_i
+                    b += eta * y[idx]
 
         self.w = w
         self.b = b
@@ -72,6 +87,12 @@ class SVM:
         proba_class_1 = expit(-(self.platt_a * decision + self.platt_b))
         proba_class_0 = 1 - proba_class_1
         return np.column_stack([proba_class_0, proba_class_1])
+
+    def _standardize(self, X: np.ndarray) -> np.ndarray:
+        if self.feature_mean is None or self.feature_scale is None:
+            raise ValueError("Model not trained. Call fit() first.")
+
+        return (X - self.feature_mean) / self.feature_scale
 
     def _fit_platt_scaling(self, X: np.ndarray, Y: np.ndarray) -> None:
         decision_values = self._decision_function(X)
@@ -99,4 +120,5 @@ class SVM:
         if self.w is None or self.b is None:
             raise ValueError("Model not trained. Call fit() first.")
 
-        return np.dot(X, self.w) + self.b
+        X_scaled = self._standardize(X)
+        return np.dot(X_scaled, self.w) + self.b

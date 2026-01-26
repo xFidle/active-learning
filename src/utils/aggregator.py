@@ -47,8 +47,7 @@ class Aggregator:
 
                 if name in CLASSIFIERS:
                     clf = resolve_classifier(cast(ClassifierName, name), p)
-                    if name == "forest":
-                        clf.set_rng(seed)
+                    clf.set_rng(seed)
                 else:
                     clf = resolve_sklearn_classifier(
                         cast(ClassifierName, name.split("-")[1]), p, seed
