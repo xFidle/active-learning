@@ -80,11 +80,13 @@ być kosztowny, ponieważ w każdej iteracji trzeba od nowa dopasowywać model d
 danych.
 
 \subsection{Inicjalizacja zbioru etykietowanego}
-Na początku uczenia aktywnego wybierany jest początkowy zestaw przykładów.
-Wariant \textit{random} zakłada losowy dobór próbek, natomiast inicjalizacja
-\textit{cluster} stara się rozłożyć wybór na różne obszary przestrzeni cech,
-aby zbiór startowy był bardziej reprezentatywny. Dzięki temu model szybciej
-uzyskuje podstawową wiedzę o strukturze danych i klasach.
+Na początku uczenia aktywnego wyznaczany jest początkowy zbiór etykietowany,
+który stanowi bazę dla pierwszej iteracji modelu. Wariant \textit{random}
+realizuje losowy dobór próbek, natomiast inicjalizacja \textit{cluster}
+ukierunkowuje wybór na różne regiony przestrzeni cech, tak aby zapewnić lepszą
+reprezentatywność zbioru startowego. Taki dobór zwiększa prawdopodobieństwo
+uwzględnienia różnych klas i przyspiesza stabilizację wczesnych estymacji
+modelu.
 
 \subsection{Sposoby wybierania próbek}
 W uczeniu aktywnym należy zdefiniować kryterium, według którego model będzie
