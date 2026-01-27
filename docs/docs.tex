@@ -223,11 +223,14 @@ Kluczową ideą SVM jest maksymalizacja marginesu, czyli odległości między
 hiperpłaszczyzną a najbliższymi punktami każdej z klas (tzw.\ wektorami
 nośnymi). W przypadku danych nieliniowo rozdzielnych wprowadza się parametr kary
 $C$, który kontroluje kompromis między maksymalizacją marginesu a minimalizacją
-błędu klasyfikacji. W implementacji zastosowano standaryzację cech (średnia 0,
-odchylenie 1), co stabilizuje uczenie i pozwala zachować porównywalną skalę
-atrybutów. Uczenie wag realizowane jest metodą SGD w wariancie Pegasos z
-malejącym krokiem uczenia oraz tasowaniem próbek w każdej epoce, minimalizując
-funkcję celu zawierającą \textbf{funkcję straty zawiasowej}:
+błędu klasyfikacji. W implementacji zastosowano standaryzację cech na podstawie
+średniej i odchylenia standardowego wyznaczanego na zbiorze treningowym, a
+parametry te są następnie używane podczas predykcji. Uczenie wag realizowane
+jest metodą Pegasos (SGD) z losowym tasowaniem próbek oraz krokiem uczenia
+malejącym według $
+	\eta_t = \frac{\eta}{1 + \eta \lambda t}$, gdzie
+$\lambda = \frac{1}{C \cdot n}$, minimalizując funkcję celu zawierającą
+\textbf{funkcję straty zawiasowej}:
 
 \begin{equation*} L(\mathbf{w}, b) = \frac{1}{2}\|\mathbf{w}\|^2 + C
 	\sum_{i=1}^{n} \max(0, 1 - y_i(\mathbf{w}^T\mathbf{x}_i + b)) \end{equation*}
@@ -283,15 +286,17 @@ słoneczników (klasa 1) i 650 mniszków lekarskich (klasa 0). Każdy przykład 
 dokładnie 2048 atrybutów (wszystkie ciągłe).
 
 \section{Eksperymenty}
-\subsection{Porównanie z \textit{SKLEARN}} Tak jak wspomniano w sekcji
-dotyczącej opisu zbiorów danych przeprowadzono testy porównawcze naszych
-algorytmów z bilbioteką \textit{SKLEARN} w celu odniesienia uzyskanych wyników
-do wartości referencyjnych. Przeprowadzonych zostało 10 niezależnych
-uruchomień, każde z innym ziarnem startowym wykorzystywanym do dzielenia
-zbiorów danych na trenujący i testujący (80\% \textendash{} 20\%) oraz jako
-parametr algorytmu uczącego. Następnie zagregowano wyniki. Parametry obu modeli
-zostały ustawione jednakowo, zgodnie z domyślnymi w \textit{SKLEARN}. Do
-porównania wykorzystano standardowe miary oceny jakości klasyfikatora.
+\subsection{Porównanie z \textit{SKLEARN}}
+Tak jak wspomniano w sekcji dotyczącej opisu zbiorów danych przeprowadzono testy
+porównawcze z biblioteką \textit{SKLEARN} w celu odniesienia uzyskanych wyników do
+wartości referencyjnych. Przeprowadzonych zostało 10 niezależnych uruchomień,
+każde z innym ziarnem startowym wykorzystywanym do dzielenia zbiorów danych na
+trenujący i testujący (80\% \textendash{} 20\%) oraz jako parametr algorytmu
+uczącego. Następnie zagregowano wyniki. Parametry modeli zostały ustawione
+jednakowo, zgodnie z domyślnymi w \textit{SKLEARN}. Do porównania wykorzystano
+standardowe miary oceny jakości klasyfikatora.
+
+\subsubsection{Las losowy}
 
 \begin{table}[!ht]
 	\begin{minipage}{0.48\linewidth}
@@ -315,8 +320,8 @@ porównania wykorzystano standardowe miary oceny jakości klasyfikatora.
 			\toprule
 			algorytm                  & średnia & std   & max   & min   \\
 			\midrule
-			forest                    & 0.8404  & 0.006 & 0.848 & 0.828 \\
-			\textbf{\textit{SKLEARN}} & 0.8472  & 0.003 & 0.852 & 0.837 \\
+			forest                    & 0.840   & 0.006 & 0.848 & 0.828 \\
+			\textbf{\textit{SKLEARN}} & 0.847   & 0.003 & 0.852 & 0.837 \\
 			\bottomrule
 		\end{tabular}
 		\caption{Porównanie miary \textbf{F1-Score}.}
@@ -345,17 +350,84 @@ porównania wykorzystano standardowe miary oceny jakości klasyfikatora.
 			\toprule
 			algorytm                  & średnia & std   & max   & min   \\
 			\midrule
-			forest                    & 0.7697  & 0.007 & 0.783 & 0.757 \\
-			\textbf{\textit{SKLEARN}} & 0.8219  & 0.005 & 0.834 & 0.814 \\
+			forest                    & 0.770   & 0.007 & 0.783 & 0.757 \\
+			\textbf{\textit{SKLEARN}} & 0.822   & 0.005 & 0.834 & 0.814 \\
 			\bottomrule
 		\end{tabular}
 		\caption{Porównanie miary \textbf{precision}.}
 	\end{minipage}
 \end{table}
 
-Wyniki są porównywalne. Różnice mogą wynikać z różnic w poszczególnych
-implementacjach algorytmów. Jednakże wyniki są na tyle blisko, że bez straty
-ogólności można założyć, że algorytmy zostały zaimplementowane poprawnie.
+Wyniki są porównywalne, a obserwowane różnice wynikają najpewniej z odmiennych
+sposobów implementacji algorytmów. Otrzymane wartości są na tyle zbliżone, że
+można uznać nasze implementacje za poprawne.
+
+\subsubsection{SVM}
+
+\begin{table}[!ht]
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm             & średnia & std   & max   & min   \\
+			\midrule
+			svm                  & 0.713   & 0.013 & 0.731 & 0.690 \\
+			\textit{SKLEARN-svm} & 0.740   & 0.008 & 0.754 & 0.728 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{accuracy} dla SVM.}
+	\end{minipage}
+	\hfill
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm             & średnia & std   & max   & min   \\
+			\midrule
+			svm                  & 0.775   & 0.012 & 0.788 & 0.752 \\
+			\textit{SKLEARN-svm} & 0.805   & 0.006 & 0.815 & 0.794 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{F1-Score} dla SVM.}
+	\end{minipage}
+\end{table}
+
+\begin{table}[!ht]
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm             & średnia & std   & max   & min   \\
+			\midrule
+			svm                  & 0.783   & 0.035 & 0.839 & 0.710 \\
+			\textit{SKLEARN-svm} & 0.846   & 0.009 & 0.856 & 0.826 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{recall} dla SVM.}
+	\end{minipage}
+	\hfill
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm             & średnia & std   & max   & min   \\
+			\midrule
+			svm                  & 0.769   & 0.022 & 0.799 & 0.719 \\
+			\textit{SKLEARN-svm} & 0.767   & 0.006 & 0.780 & 0.759 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{precision} dla SVM.}
+	\end{minipage}
+\end{table}
+
+W porównaniu SVM widoczny jest spadek \textit{accuracy}, \textit{F1} i
+\textit{recall} względem implementacji referencyjnej, przy zachowaniu podobnej
+\textit{precision}. Różnice te wynikają z odmiennego sposobu uczenia (Pegasos)
+jednak kierunek wyników pozostaje spójny z wersją referencyjną.
 
 \subsection{Proces uczenia aktywnego}
 
