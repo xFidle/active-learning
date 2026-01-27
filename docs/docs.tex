@@ -382,7 +382,18 @@ zostały założenia:
 		SVM-rand-unc & 0.651 & 0.796 & 0.846 & 0.841 & 0.823 \\
 		\bottomrule
 	\end{tabular*}
+	\caption{Uśrednione wartości PR-AUC na różnych etapach uczenia}
 \end{table}
+
+Wyniki pokazują, że warianty SVM uzyskują wyższe wartości PR-AUC już przy
+25\% poetykietowanych danych, a ich przewaga utrzymuje się również przy 50\%
+i 75\% etykiet. Najszybszy przyrost jakości w obu modelach zapewnia selekcja
+\textit{uncertainty}, co widać szczególnie dla inicjalizacji klastrowej, gdzie
+SVM przekracza 0.8 PR-AUC już przy 30\%. Dla lasu losowego poprawa jest bardziej
+umiarkowana i zależna od strategii: losowe próbkowanie rośnie najwolniej, a
+strategie \textit{uncertainty} i \textit{diversity} wyraźnie przyspieszają naukę
+w środkowej fazie (50\%--75\%). Końcowy poziom (100\%) jest zbliżony w obrębie
+każdej rodziny modeli, co odpowiada poziomowi uczenia pasywnego.
 
 \subsubsection{Wykresy zbieżności}
 \begin{figure}[H]
