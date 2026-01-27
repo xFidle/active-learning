@@ -8,6 +8,9 @@
 \usepackage{hyperref}
 \usepackage{algorithm}
 \usepackage{algorithmic}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[font=footnotesize]{caption}
 
 \geometry{margin=0.75in}
 \setlength{\parskip}{6pt}
@@ -79,23 +82,23 @@ danych.
 \section{Opis funkcjonalny}
 System składa się z dwóch głównych programów uruchamianych z linii poleceń:
 \texttt{src.main} realizującego pętlę uczenia aktywnego oraz
-\texttt{src.process\_\allowbreak images} przygotowującego dane wejściowe na podstawie zdjęć.
+\texttt{src.process\_\allowbreak{}images} przygotowującego dane wejściowe na podstawie zdjęć.
 Uruchomienie odbywa się przez polecenie
-\texttt{python3 -m src.\allowbreak \textless{}moduł\textgreater{}}, gdzie nazwa
+\texttt{python3 -m src.\allowbreak{}\textless{}moduł\textgreater{}}, gdzie nazwa
 modułu podawana jest bez rozszerzenia. Przykładowe polecenia:
 \begin{itemize}
-	\item \texttt{python3 -m src.process\_\allowbreak images}
+	\item \texttt{python3 -m src.process\_\allowbreak{}images}
 	\item \texttt{python3 -m src.main}
-	\item \texttt{python3 -m src.main -c configs/svm\_\allowbreak cluster\_\allowbreak random}
+	\item \texttt{python3 -m src.main -c configs/svm\_\allowbreak{}cluster\_\allowbreak{}random}
 \end{itemize}
 
 Instalacja zależności może być wykonana w aktywnym środowisku \texttt{venv} przy
-pomocy \texttt{pip install .}.
+pomocy \texttt{pip install}.
 
 Dla \texttt{src.main} można wskazać własny plik konfiguracyjny przy pomocy flagi
 \texttt{-c} (lub \texttt{--config}). Domyślnie ładowany jest plik
 \texttt{config.toml}, a dla przetwarzania obrazów
-\texttt{image\_\allowbreak processing\_\allowbreak config.toml}.
+\texttt{image\_\allowbreak{}processing\_\allowbreak{}config.toml}.
 Jeżeli wskazany plik nie istnieje, system tworzy go automatycznie na podstawie
 zarejestrowanych klas konfiguracyjnych.
 
@@ -103,17 +106,17 @@ zarejestrowanych klas konfiguracyjnych.
 Konfiguracja przetwarzania danych steruje pobieraniem zbioru, ekstrakcją cech oraz
 przygotowaniem pliku wejściowego do uczenia aktywnego. W pliku znajdują się m.in.:
 \begin{itemize}
-	\item \texttt{data\_processing.output\_\allowbreak dir} \textendash{} katalog zapisu danych
-	      (np. \texttt{data/active\_\allowbreak learning});
-	\item \texttt{data\_processing.unlabeled\_\allowbreak percentage} \textendash{} odsetek
+	\item \texttt{data\_processing.output\_\allowbreak{}dir} \textendash{} katalog zapisu danych
+	      (np.\ \texttt{data/active\_\allowbreak{}learning});
+	\item \texttt{data\_processing.unlabeled\_\allowbreak{}percentage} \textendash{} odsetek
 	      przykładów, których etykiety są ukrywane;
-	\item \texttt{data\_processing.majority\_\allowbreak ratio} \textendash{} docelowy stosunek
+	\item \texttt{data\_processing.majority\_\allowbreak{}ratio} \textendash{} docelowy stosunek
 	      klasy większościowej do mniejszościowej;
 	\item \texttt{image\_processing.model} \textendash{} nazwa sieci CNN używanej do
-	      ekstrakcji cech (np. \texttt{resnet50});
-	\item \texttt{image\_processing.data\_\allowbreak dir} \textendash{} katalog źródłowy ze
+	      ekstrakcji cech (np.\ \texttt{resnet50});
+	\item \texttt{image\_processing.data\_\allowbreak{}dir} \textendash{} katalog źródłowy ze
 	      zdjęciami;
-	\item \texttt{image\_processing.force\_\allowbreak download} \textendash{} wymuszenie
+	\item \texttt{image\_processing.force\_\allowbreak{}download} \textendash{} wymuszenie
 	      ponownego pobrania danych.
 \end{itemize}
 
@@ -133,7 +136,7 @@ force_download = false
 \subsection*{Konfiguracja uczenia aktywnego}
 Konfiguracja uczenia aktywnego definiuje model klasyfikatora, strategię doboru
 próbek oraz parametry walidacji. Dodatkowo dostępny jest moduł
-\texttt{python3 -m src.compare\_\allowbreak with\_\allowbreak sklearn
+\texttt{python3 -m src.compare\_\allowbreak{with\_}\allowbreak{sklearn}
 	\textless{}classifier\textgreater{}}, który uruchamia porównanie z
 implementacją \textit{scikit-learn}. Moduł przyjmuje argument
 \texttt{classifier} (\texttt{svm} lub \texttt{forest}) oraz korzysta z ustawień
@@ -141,7 +144,7 @@ z sekcji \texttt{aggregator} w pliku konfiguracyjnym.
 Najważniejsze sekcje:
 \begin{itemize}
 	\item \texttt{cluster\_initializer} \textendash{} parametry inicjalizacji
-	      klastrami (np. liczba klastrów i proporcje);
+	      klastrami (np\. liczba klastrów i proporcje);
 	\item \texttt{svm} oraz \texttt{forest} \textendash{} parametry modeli SVM i
 	      lasu losowego;
 	\item \texttt{active\_learner} \textendash{} wybór klasyfikatora, selektora
@@ -280,7 +283,81 @@ słoneczników (klasa 1) i 650 mniszków lekarskich (klasa 0). Każdy przykład 
 dokładnie 2048 atrybutów (wszystkie ciągłe).
 
 \section{Eksperymenty}
-\subsection{Porównanie z \textit{SKLEARN}}
+\subsection{Porównanie z \textit{SKLEARN}} Tak jak wspomniano w sekcji
+dotyczącej opisu zbiorów danych przeprowadzono testy porównawcze naszych
+algorytmów z bilbioteką \textit{SKLEARN} w celu odniesienia uzyskanych wyników
+do wartości referencyjnych. Przeprowadzonych zostało 10 niezależnych
+uruchomień, każde z innym ziarnem startowym wykorzystywanym do dzielenia
+zbiorów danych na trenujący i testujący (80\% \textendash{} 20\%) oraz jako
+parametr algorytmu uczącego. Następnie zagregowano wyniki. Parametry obu modeli
+zostały ustawione jednakowo, zgodnie z domyślnymi w \textit{SKLEARN}. Do
+porównania wykorzystano standardowe miary oceny jakości klasyfikatora.
+
+\begin{table}[!ht]
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm                  & średnia & std   & max   & min   \\
+			\midrule
+			forest                    & 0.777   & 0.009 & 0.790 & 0.761 \\
+			\textit{\textbf{SKLEARN}} & 0.800   & 0.004 & 0.807 & 0.790 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{accuracy}.}
+	\end{minipage}
+	\hfill
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm                  & średnia & std   & max   & min   \\
+			\midrule
+			forest                    & 0.8404  & 0.006 & 0.848 & 0.828 \\
+			\textbf{\textit{SKLEARN}} & 0.8472  & 0.003 & 0.852 & 0.837 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{F1-Score}.}
+	\end{minipage}
+\end{table}
+
+\begin{table}[!ht]
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm         & średnia & std   & max   & min   \\
+			\midrule
+			\textbf{forest}  & 0.925   & 0.009 & 0.935 & 0.905 \\
+			\textit{SKLEARN} & 0.874   & 0.009 & 0.884 & 0.855 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{recall}.}
+	\end{minipage}
+	\hfill
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm                  & średnia & std   & max   & min   \\
+			\midrule
+			forest                    & 0.7697  & 0.007 & 0.783 & 0.757 \\
+			\textbf{\textit{SKLEARN}} & 0.8219  & 0.005 & 0.834 & 0.814 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{precision}.}
+	\end{minipage}
+\end{table}
+
+Wyniki są porównywalne. Różnice mogą wynikać z różnic w poszczególnych
+implementacjach algorytmów. Jednakże wyniki są na tyle blisko, że bez straty
+ogólności można założyć, że algorytmy zostały zaimplementowane poprawnie.
+
+\subsection{Proces uczenia aktywnego}
 
 \section{Opis wykorzystanych narzędzi}
 W implementacji wykorzystano narzędzia i biblioteki wspierające zarówno obróbkę
