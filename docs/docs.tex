@@ -9,7 +9,8 @@
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{booktabs}
-\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{subcaption}
 \usepackage[font=footnotesize]{caption}
 
 \geometry{margin=0.75in}
@@ -41,6 +42,7 @@ Jako główną miarę ewaluacji jakości modelu wykorzystano pole pod krzywą
 klasy pozytywnej, a nie na licznych przykładach klasy większościowej.
 
 \section{Uczenie aktywne}
+\subsection{Opis procesu}
 Uczenie aktywne to metoda, która pozwala algorytmom uczenia maszynowego osiągać
 lepsze wyniki w przypadkach gdy zbiór danych jest mocno niezbalansowany i
 zawiera wiele brakujących etykiet. Model sam, bez ingerencji użytkownika,
@@ -49,11 +51,9 @@ treningu. Następnie zewnętrzne źródło (zazwyczaje ekspert domenowy) manualn
 etykietuje wyznaczone próbki. Takie podejście pozwala minimializować potrzebę
 posiadania dużego zbioru danych nie poświęcając przy tym skuteczności modelu.
 
-\newpage
-
 Uczenie aktywne jest procesem iteracyjnym. Pseudokod metody może być przedstawiony
 następująco:
-\begin{algorithm}
+\begin{algorithm}[H]
 	\caption{Uczenie aktywne}
 	\begin{algorithmic}[1]
 		\STATE{Wybierz początkowy zbiór przykładów trenujących $T$ z całego
@@ -73,12 +73,28 @@ następująco:
 	\end{algorithmic}
 \end{algorithm}
 
+
 Głownym ograniczeniem uczenia aktywnego jest długotrwały proces etykietowania
 danych, który wymaga możliwie jak najepszej ``wyroczni''. Dodatkowo proces może
 być kosztowny, ponieważ w każdej iteracji trzeba od nowa dopasowywać model do
 danych.
 
+\subsection{Sposoby wybierania próbek}
+W uczeniu aktywnym należy zdefiniować kryterium, według którego model będzie
+wybierał próbki przeznaczone do anotacji. Przygotowane zostały trzy warianty:
+\begin{itemize}
+	\item \textbf{uncertainty sampling} \textendash{} największa niepewność predykcji:
+	      \begin{equation*}
+		      \max_{x \in P} \; \left( 1 - \max_{\hat{y} \in C}{P(\hat{y}|x)} \right)
+	      \end{equation*}
 
+	\item \textbf{diversity sampling} \textendash{} największa różnorodność:
+	      \begin{equation*}
+		      \max_{x \in P} \; \left( \min_{x^\prime \in T} \delta({x, x^\prime}) \right)
+	      \end{equation*}
+	      gdzie $\delta({x, x^\prime})$ \textendash{} miara podobieństwa między dwoma próbkami (np.\ euklidesowa).
+	\item \textbf{random} \textendash{} losowo, zgodnie z rozkładem jednostajnym.
+\end{itemize}
 
 \section{Opis algorytmów} \subsection{Random forest} Las losowy jest algorytmem,
 który generuje wiele różnych drzew w procesie uczenia i przypisuje klasy, będące
@@ -313,7 +329,93 @@ W porównaniu SVM widoczny jest spadek \textit{accuracy}, \textit{F1} i
 \textit{precision}. Różnice te wynikają z odmiennego sposobu uczenia (Pegasos)
 jednak kierunek wyników pozostaje spójny z wersją referencyjną.
 
-\subsection{Proces uczenia aktywnego}
+\subsection{Uczenie aktywne}
+\subsubsection{Założenia}
+Podczas przeprowadzania eksperymentów dotczyczących uczenia aktywnego poczynione
+zostały założenia:
+\begin{itemize}
+	\item Próbki nie są ręcznie etykietowane. Informacja o obecności etykiety
+	      jest kodowana za pomocą flagi binarnej (0 \textendash{} brak etykiety, 1
+	      \textendash{} etykieta obecna). Po każdym wywołaniu selektora, który
+	      zwraca próbki do poetykietowania, flaga binarna dla danego przykładu
+	      jest zmieniana z 0 na 1. Na podstwie ustalonych bitów model decyduje,
+	      który przykład może zostać wykorzystany w zbiorze treningowym;
+	\item Do ewaluacji wyników wykorzystano $n$-krotną waldiację krzyżową
+	      ($k$-fold), z parametrami $n = 5$ i $k = 5$. Pondato upewniono się, że
+	      w każdym zbiorze testowym znajduje się co najmniej jeden przykład z
+	      klasy mniejszościowej;
+	\item Jako miarę oceny jakości wykorzystano pole pod krzywą
+	      \textit{precsion-recall} (PR-AUC), ponieważ skupia się ona na jakości
+	      predykcji klasy pozytywnej, a nie licznych przykładach klasy
+	      większościowej;
+	\item Wszystkie elementy losowe (np.\ generowanie drzew w lesie losowym) są
+	      przeprowadzane z odpowiednio ustawionymi ziarnami dzięki czemu wyniki są
+	      reprodukowalne.
+\end{itemize}
+
+\subsubsection{Zagregowane wyniki}
+
+\subsubsection{Wykresy zbieżności}
+\begin{figure}[H]
+	\begin{subfigure}{0.49\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{../results/plots/forest-random-learning.png}
+	\end{subfigure}
+	\begin{subfigure}{0.49\linewidth}
+		\centering
+		\includegraphics[width=\linewidth]{../results/plots/forest-cluster-learning.png}
+	\end{subfigure}
+	\caption{Krzywe uczenia w zależności od \% poetykietowanych danych dla lasu
+		losowego.}
+\end{figure}
+
+\begin{figure}[H]
+	\begin{subfigure}{0.49\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{../results/plots/svm-random-learning.png}
+	\end{subfigure}
+	\begin{subfigure}{0.49\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{../results/plots/svm-cluster-learning.png}
+	\end{subfigure}
+	\caption{Krzywe uczenia w zależności od \% poetykietowanych danych dla SVM.}
+\end{figure}
+
+\noindent Wnioski:
+\begin{itemize}
+	\item wniosek 1
+\end{itemize}
+
+\subsubsection{Przykładowe krzywe \textit{precision-recall}}
+\begin{figure}[H]
+	\begin{subfigure}{0.49\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{../results/plots/forest_random_uncertainty-pr.png}
+	\end{subfigure}
+	\begin{subfigure}{0.49\linewidth}
+		\centering
+		\includegraphics[width=\linewidth]{../results/plots/svm_random_uncertainty-pr.png}
+	\end{subfigure}
+	\caption{Krzywe \textit{precision-recall} dla lasu losowego.}
+\end{figure}
+
+\begin{figure}[H]
+	\begin{subfigure}{0.49\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{../results/plots/forest_cluster_uncertainty-pr.png}
+	\end{subfigure}
+	\begin{subfigure}{0.49\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{../results/plots/svm_cluster_uncertainty-pr.png}
+	\end{subfigure}
+	\caption{Krzywe \textit{precision-recall} dla SVM}.
+\end{figure}
+
+\noindent Wnioski:
+\begin{itemize}
+	\item wniosek 1
+\end{itemize}
+
 
 \section{Opis funkcjonalny}
 System składa się z dwóch głównych programów uruchamianych z linii poleceń:
@@ -327,9 +429,6 @@ modułu podawana jest bez rozszerzenia. Przykładowe polecenia:
 	\item \texttt{python3 -m src.main}
 	\item \texttt{python3 -m src.main -c configs/svm\_\allowbreak{}cluster\_\allowbreak{}random}
 \end{itemize}
-
-Instalacja zależności może być wykonana w aktywnym środowisku \texttt{venv} przy
-pomocy \texttt{pip install}.
 
 Dla \texttt{src.main} można wskazać własny plik konfiguracyjny przy pomocy flagi
 \texttt{-c} (lub \texttt{--config}). Domyślnie ładowany jest plik
@@ -345,7 +444,7 @@ przygotowaniem pliku wejściowego do uczenia aktywnego. W pliku znajdują się m
 	\item \texttt{data\_processing.output\_\allowbreak{}dir} \textendash{} katalog zapisu danych
 	      (np.\ \texttt{data/active\_\allowbreak{}learning});
 	\item \texttt{data\_processing.unlabeled\_\allowbreak{}percentage} \textendash{} odsetek
-	      przykładów, których etykiety są ukrywane;
+	      przykładów z ukrytymi etykietami;
 	\item \texttt{data\_processing.majority\_\allowbreak{}ratio} \textendash{} docelowy stosunek
 	      klasy większościowej do mniejszościowej;
 	\item \texttt{image\_processing.model} \textendash{} nazwa sieci CNN używanej do
