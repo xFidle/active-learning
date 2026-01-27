@@ -7,7 +7,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
-from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
 
 from src.config import ConfigParser, register_config
 from src.models.classifier import CLASSIFIERS, Classifier, ClassifierName, resolve_classifier
@@ -88,10 +88,7 @@ def resolve_sklearn_classifier(
     match classifier:
         case "svm":
             svm_config = config_parser.get(SVMConfig)
-            return cast(
-                Classifier,
-                SVC(kernel="linear", C=svm_config.penalty, max_iter=svm_config.iter_count),
-            )
+            return cast(Classifier, LinearSVC(C=svm_config.penalty, max_iter=svm_config.iter_count))
         case "forest":
             forest_config = config_parser.get(RandomForestConfig)
             return cast(
