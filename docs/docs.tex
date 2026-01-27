@@ -356,6 +356,8 @@ zostały założenia:
 	      \textit{precsion-recall} (PR-AUC), ponieważ skupia się ona na jakości
 	      predykcji klasy pozytywnej, a nie licznych przykładach klasy
 	      większościowej;
+	\item Każdy selektor, który wskazuje dane do poetykietowania, zwraca je w
+	      grupach liczących dokładnie 10 próbek;
 	\item Wszystkie elementy losowe (np.\ generowanie drzew w lesie losowym) są
 	      przeprowadzane z odpowiednio ustawionymi ziarnami dzięki czemu wyniki są
 	      reprodukowalne.
@@ -423,7 +425,26 @@ każdej rodziny modeli, co odpowiada poziomowi uczenia pasywnego.
 
 \noindent Wnioski:
 \begin{itemize}
-	\item wniosek 1
+	\item Wybieranie próbek, co do których model jest najbardziej niepewny daje
+	      najlepsze wyniki, ponieważ taka selekcja w pełni wykorzystuje informacje
+	      zawarte w zbiorze danych niepoetykietowanych. Zarówno dla lasu
+	      losowego jak i SVM model już po paru iteracjach procesu uczenia
+	      aktywnego osiąga wyniki powyżej progu wyznaczonego przez model
+	      nauczony na 100\% danych;
+	\item Strategie \textit{diversity} i \textit{random} nie osiągają
+	      zadowalających wyników w ramach uczenia aktywnego \textendash{} prawie
+	      najwyższą wartość miary jakości uzyskują dopiero przy 100\%
+	      poetykietowanych danych. Oznacza to, że proces etykietowania nie może
+	      zostać przerwany na wcześniejszym etapie bez istotnej utraty jakości
+	      modelu;
+	\item Strategia \textit{diversity} radzi sobie słabo, ponieważ w przypadku
+	      tak dużej liczby atrybutów (2048) musimy mierzyć się z problemem
+	      wymiarowości. W tak dużej przestrzeni zanikają różnice niepodobieństwa
+	      przez co próbki wybierane są prawie że losowo;
+	\item Selektor losowy (\textit{random}) w żaden sposób nie wykorzystuje
+	      informacji o modelu lub zbiorze niepoetykietowanych danych przez co większość
+	      nowych przykładów nie wnosi istotnej informacji i w żaden sposób nie poprawia
+	      jakości predykcji.
 \end{itemize}
 
 \subsubsection{Przykładowe krzywe \textit{precision-recall}}
@@ -434,7 +455,7 @@ każdej rodziny modeli, co odpowiada poziomowi uczenia pasywnego.
 	\end{subfigure}
 	\begin{subfigure}{0.49\linewidth}
 		\centering
-		\includegraphics[width=\linewidth]{../results/plots/svm_random_uncertainty-pr.png}
+		\includegraphics[width=\linewidth]{../results/plots/forest_cluster_uncertainty-pr.png}
 	\end{subfigure}
 	\caption{Krzywe \textit{precision-recall} dla lasu losowego.}
 \end{figure}
@@ -442,7 +463,7 @@ każdej rodziny modeli, co odpowiada poziomowi uczenia pasywnego.
 \begin{figure}[H]
 	\begin{subfigure}{0.49\textwidth}
 		\centering
-		\includegraphics[width=\linewidth]{../results/plots/forest_cluster_uncertainty-pr.png}
+		\includegraphics[width=\linewidth]{../results/plots/svm_random_uncertainty-pr.png}
 	\end{subfigure}
 	\begin{subfigure}{0.49\textwidth}
 		\centering
@@ -453,9 +474,8 @@ każdej rodziny modeli, co odpowiada poziomowi uczenia pasywnego.
 
 \noindent Wnioski:
 \begin{itemize}
-	\item wniosek 1
+	\item
 \end{itemize}
-
 
 \section{Opis funkcjonalny}
 System składa się z dwóch głównych programów uruchamianych z linii poleceń:
