@@ -4,7 +4,7 @@ from typing import cast
 
 import pandas as pd
 
-TARGET_RATIOS = [0.25, 0.30, 0.50, 1.00]
+TARGET_RATIOS = [0.25, 0.30, 0.50, 0.75, 1.00]
 
 MODEL_LABELS = {"forest": "RF", "svm": "SVM"}
 
@@ -65,7 +65,7 @@ def main() -> None:
         row: list[float | str] = [label_from_dir(auc_dir.name), *values]
         rows.append(row)
 
-    table_df = pd.DataFrame(rows, columns=["wariant", "25\\%", "30\\%", "50\\%", "100\\%"])
+    table_df = pd.DataFrame(rows, columns=["wariant", "25\\%", "30\\%", "50\\%", "75\\%", "100\\%"])
     table_df = table_df.sort_values("wariant")
 
     output_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -81,7 +81,7 @@ def main() -> None:
     )
 
     latex_table = (
-        r"\begin{table}[h]"
+        r"\begin{table}[H]"
         "\n"
         r"\centering"
         "\n" + latex_table + r"\end{table}"
