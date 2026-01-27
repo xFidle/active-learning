@@ -79,6 +79,13 @@ danych, który wymaga możliwie jak najepszej ``wyroczni''. Dodatkowo proces mo�
 być kosztowny, ponieważ w każdej iteracji trzeba od nowa dopasowywać model do
 danych.
 
+\subsection{Inicjalizacja zbioru etykietowanego}
+Na początku uczenia aktywnego wybierany jest początkowy zestaw przykładów.
+Wariant \textit{random} zakłada losowy dobór próbek, natomiast inicjalizacja
+\textit{cluster} stara się rozłożyć wybór na różne obszary przestrzeni cech,
+aby zbiór startowy był bardziej reprezentatywny. Dzięki temu model szybciej
+uzyskuje podstawową wiedzę o strukturze danych i klasach.
+
 \subsection{Sposoby wybierania próbek}
 W uczeniu aktywnym należy zdefiniować kryterium, według którego model będzie
 wybierał próbki przeznaczone do anotacji. Przygotowane zostały trzy warianty:
