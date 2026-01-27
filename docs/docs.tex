@@ -384,7 +384,7 @@ zostały założenia:
 		SVM-rand-unc & 0.651 & 0.796 & 0.846 & 0.841 & 0.823 \\
 		\bottomrule
 	\end{tabular*}
-	\caption{Uśrednione wartości PR-AUC na różnych etapach uczenia}
+	\caption{Uśrednione wartości PR-AUC na różnych etapach uczenia.}
 \end{table}
 
 Wyniki pokazują, że warianty SVM uzyskują wyższe wartości PR-AUC już przy
@@ -394,8 +394,7 @@ i 75\% etykiet. Najszybszy przyrost jakości w obu modelach zapewnia selekcja
 SVM przekracza 0.8 PR-AUC już przy 30\%. Dla lasu losowego poprawa jest bardziej
 umiarkowana i zależna od strategii: losowe próbkowanie rośnie najwolniej, a
 strategie \textit{uncertainty} i \textit{diversity} wyraźnie przyspieszają naukę
-w środkowej fazie (50\%--75\%). Końcowy poziom (100\%) jest zbliżony w obrębie
-każdej rodziny modeli, co odpowiada poziomowi uczenia pasywnego.
+w środkowej fazie (50\%--75\%).
 
 \subsubsection{Wykresy zbieżności}
 \begin{figure}[H]
@@ -469,12 +468,19 @@ każdej rodziny modeli, co odpowiada poziomowi uczenia pasywnego.
 		\centering
 		\includegraphics[width=\linewidth]{../results/plots/svm_cluster_uncertainty-pr.png}
 	\end{subfigure}
-	\caption{Krzywe \textit{precision-recall} dla SVM}.
+	\caption{Krzywe \textit{precision-recall} dla SVM.}
 \end{figure}
-
 \noindent Wnioski:
 \begin{itemize}
-	\item
+	\item Klastrowa inicjalizacja powoduje niestabilność na początkowych etapach
+	      uczenia, które objawiają się jako szpilki na wykresie.
+	\item Nie zawsze przy 100\% poetykietowanych danych model zwraca największe
+	      wartości miary jakości (PR AUC). W przypadku strategii
+	      \textit{uncertainty} model jest już ``nasycony'' przy 50\%
+	      przetworzonych daynch, dalsze trenowanie nie zwiększa jakości.
+	\item Wszystkie wykresy są stosunkowo gładkie \textendash{} nia ma żadnego
+	      wyraźnego załamania, po którym precyzja malałaby drastycznie. Oznacza
+	      to, że proces uczenia przebiega stabilnie.
 \end{itemize}
 
 \section{Opis funkcjonalny}
