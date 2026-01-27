@@ -79,6 +79,242 @@ być kosztowny, ponieważ w każdej iteracji trzeba od nowa dopasowywać model d
 danych.
 
 
+
+\section{Opis algorytmów} \subsection{Random forest} Las losowy jest algorytmem,
+który generuje wiele różnych drzew w procesie uczenia i przypisuje klasy, będące
+dominantą wyników poszczególnych drzew. W odróżnieniu od pojedynczego drzewa
+tendencja modelu do nadmiernego dopasowania jest dużo mniejsza. Każde drzewo
+trenowane jest na tylu przykładach ile jest w zbiorze trenującym, jednakże
+losowane są one ze zwracaniem. Ponadto ograniczony jest zestaw atrybutów,
+wybierane jest ich wyłącznie $\sqrt{|A|}$ (bez zwracania), gdzie $A$
+\textendash{} to zbiór atrybutów.
+
+Każde drzewo wchodzące w skład lasu losowego jest drzewem typu \textit{CART}.
+Reguły podziału w poszczególnych węzłach są konstruowane w taki sposób, aby po
+podziale minimalizować wartość \textbf{zanieczyszczenia Gini’ego} (w przypadku
+zadania klasyfikacji). Miara ta jest dana wzorem: \begin{equation*} Gini(x) =
+	\sum_{i=0}^{|C|} 1-p_i^2 \end{equation*} gdzie $p_i$ \textendash{}
+prawdopodobieństwo $i$-tej klasy w węźle, a $C$ \textendash{} zbiór klas.
+
+\subsection{SVM} Maszyna wektorów nośnych jest algorytmem klasyfikacji, który
+wyznacza optymalną hiperpłaszczyznę rozdzielającą klasy w przestrzeni cech. Dla
+problemu binarnego hiperpłaszczyzna jest definiowana przez wektor wag
+$\mathbf{w}$ i wyraz wolny $b$, a klasyfikacja nowej próbki $\mathbf{x}$ odbywa
+się na podstawie znaku funkcji decyzyjnej $f(\mathbf{x}) =
+	\mathbf{w}^T\mathbf{x} + b$.
+
+Kluczową ideą SVM jest maksymalizacja marginesu, czyli odległości między
+hiperpłaszczyzną a najbliższymi punktami każdej z klas (tzw.\ wektorami
+nośnymi). W przypadku danych nieliniowo rozdzielnych wprowadza się parametr kary
+$C$, który kontroluje kompromis między maksymalizacją marginesu a minimalizacją
+błędu klasyfikacji. W implementacji zastosowano standaryzację cech na podstawie
+średniej i odchylenia standardowego wyznaczanego na zbiorze treningowym, a
+parametry te są następnie używane podczas predykcji. Uczenie wag realizowane
+jest metodą Pegasos (SGD) z losowym tasowaniem próbek oraz krokiem uczenia
+malejącym według $
+	\eta_t = \frac{\eta}{1 + \eta \lambda t}$, gdzie
+$\lambda = \frac{1}{C \cdot n}$, minimalizując funkcję celu zawierającą
+\textbf{funkcję straty zawiasowej}:
+
+\begin{equation*} L(\mathbf{w}, b) = \frac{1}{2}\|\mathbf{w}\|^2 + C
+	\sum_{i=1}^{n} \max(0, 1 - y_i(\mathbf{w}^T\mathbf{x}_i + b)) \end{equation*}
+
+\noindent gdzie $y_i \in \{-1, 1\}$ \textendash{} etykieta $i$-tej próbki, a $C$
+\textendash{} parametr kary.
+
+W sytuacjach wymagających probabilistycznego wyjścia modelu (co jest kluczowe
+np.\ w uczeniu aktywnym), możliwe jest zastosowanie metody \textbf{Platta}.
+Pozwala ona na dopasowanie funkcji sigmoidalnej do wartości funkcji decyzyjnej
+SVM, co umożliwia przekształcenie ich w oszacowania prawdopodobieństwa:
+
+\begin{equation*} P(y=1|\mathbf{x}) = \frac{1}{1 + \exp(A \cdot f(\mathbf{x}) +
+		B)} \end{equation*}
+
+\noindent gdzie parametry $A$ i $B$ wyznaczane są poprzez minimalizację ujemnej
+logarytmicznej funkcji wiarygodności na zbiorze treningowym.
+
+\section{Zbiory danych}
+\subsection{Pomocniczy} W ramach prostych testów sprawdzających poprawność
+implementacji naszych algorytmów wykorzystano odniesienie do wartości zwracanej
+przez klasyfikatory opracowane w bilbliotece \textit{SKLEARN}. Do testów
+wykorzystano zbiór danych dotyczący
+\href{https://archive.ics.uci.edu/dataset/109/wine}{jakości win}. Zadanie
+sprowadzono do klasyfikacji binarnej \textendash{} jakość mniejsza niż 6 wskazuje na
+klasę 0, a większa na 1. Zbiór zawiera 1599 przykładów i 11 atrybutów, z czego
+wszystkie są ciągłe.
+
+\subsection{Główny}
+Jako główny zbiór danych wykorzystywany w pętli uczenia aktywnego wybrano
+\href{https://www.kaggle.com/datasets/imsparsh/flowers-dataset/data}{zestaw}
+zawierający zdjęcia kwiatów. Pierwotnie podjęto taką decyzję, ponieważ założono,
+że przykłady będą etykietowane manualnie co jest łatwiejsze do zrealizowania
+patrząc na zdjęcie, a nie wektor cech. Jak się później okazało, takie podejście
+jest niemożliwe do zrealizowania ze względów ograniczeń czasowych jeżeli chcemy
+przeprowadzić dokładne eksperymenty bazujące na $n$-krotnych powtórzeniach
+walidacji krzyżowej. Przed przystąpieniem do przeprowadzenia eksperymentów
+został zbiór został przetworzony w następujący sposób:
+
+\begin{itemize}
+	\item Pozostawienie wyłącznie próbek zklasyfikowanych jako mniszki lekarskie
+	      lub słoneczniki \textendash{} ograniczenie się do klasyfikacji binarnej;
+	\item Usunięcie prawie wszystkich próbek słoneczników (ostateczny stosunek
+	      klas to 1:20) \textendash{} stworzenie niezbalansowanego zbioru danych;
+	\item Zamaskowanie etykiet 75\% przykładów (stają się one całkowicie
+	      niewidoczne dla modelu) \textendash{} symulacja sytuacji braku etykiet;
+	\item  Przetworzenie zdjęcia do postaci reprezentacji wektorowej z
+	      wykorzystaniem wcześniej wytrenowanej sieci neuronowej \textit{ResNet50}.
+\end{itemize}
+
+Ostatecznie zbiór danych składa się z 680 przykładów \textendash{} 30
+słoneczników (klasa 1) i 650 mniszków lekarskich (klasa 0). Każdy przykład ma
+dokładnie 2048 atrybutów (wszystkie ciągłe).
+
+\section{Eksperymenty}
+\subsection{Porównanie z \textit{SKLEARN}}
+Tak jak wspomniano w sekcji dotyczącej opisu zbiorów danych przeprowadzono testy
+porównawcze z biblioteką \textit{SKLEARN} w celu odniesienia uzyskanych wyników do
+wartości referencyjnych. Przeprowadzonych zostało 10 niezależnych uruchomień,
+każde z innym ziarnem startowym wykorzystywanym do dzielenia zbiorów danych na
+trenujący i testujący (80\% \textendash{} 20\%) oraz jako parametr algorytmu
+uczącego. Następnie zagregowano wyniki. Parametry modeli zostały ustawione
+jednakowo, zgodnie z domyślnymi w \textit{SKLEARN}. Do porównania wykorzystano
+standardowe miary oceny jakości klasyfikatora.
+
+\subsubsection{Las losowy}
+
+\begin{table}[H]
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm                  & średnia & std   & max   & min   \\
+			\midrule
+			forest                    & 0.777   & 0.009 & 0.790 & 0.761 \\
+			\textit{\textbf{SKLEARN}} & 0.800   & 0.004 & 0.807 & 0.790 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{accuracy}.}
+	\end{minipage}
+	\hfill
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm                  & średnia & std   & max   & min   \\
+			\midrule
+			forest                    & 0.840   & 0.006 & 0.848 & 0.828 \\
+			\textbf{\textit{SKLEARN}} & 0.847   & 0.003 & 0.852 & 0.837 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{F1-Score}.}
+	\end{minipage}
+\end{table}
+
+\begin{table}[H]
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm                  & średnia & std   & max   & min   \\
+			\midrule
+			forest                    & 0.925   & 0.009 & 0.935 & 0.905 \\
+			\textbf{\textit{SKLEARN}} & 0.874   & 0.009 & 0.884 & 0.855 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{recall}.}
+	\end{minipage}
+	\hfill
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm                  & średnia & std   & max   & min   \\
+			\midrule
+			forest                    & 0.770   & 0.007 & 0.783 & 0.757 \\
+			\textbf{\textit{SKLEARN}} & 0.822   & 0.005 & 0.834 & 0.814 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{precision}.}
+	\end{minipage}
+\end{table}
+
+Wyniki są porównywalne, a obserwowane różnice wynikają najpewniej z odmiennych
+sposobów implementacji algorytmów. Otrzymane wartości są na tyle zbliżone, że
+można uznać nasze implementacje za poprawne.
+
+\subsubsection{SVM}
+
+\begin{table}[H]
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm                  & średnia & std   & max   & min   \\
+			\midrule
+			svm                       & 0.713   & 0.013 & 0.731 & 0.690 \\
+			\textbf{\textit{SKLEARN}} & 0.740   & 0.008 & 0.754 & 0.728 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{accuracy}.}
+	\end{minipage}
+	\hfill
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm                  & średnia & std   & max   & min   \\
+			\midrule
+			svm                       & 0.775   & 0.012 & 0.788 & 0.752 \\
+			\textbf{\textit{SKLEARN}} & 0.805   & 0.006 & 0.815 & 0.794 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{F1-Score}.}
+	\end{minipage}
+\end{table}
+
+\begin{table}[H]
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm                  & średnia & std   & max   & min   \\
+			\midrule
+			svm                       & 0.783   & 0.035 & 0.839 & 0.710 \\
+			\textbf{\textit{SKLEARN}} & 0.846   & 0.009 & 0.856 & 0.826 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{recall}.}
+	\end{minipage}
+	\hfill
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\small
+		\begin{tabular}{lcccc}
+			\toprule
+			algorytm                  & średnia & std   & max   & min   \\
+			\midrule
+			svm                       & 0.769   & 0.022 & 0.799 & 0.719 \\
+			\textbf{\textit{SKLEARN}} & 0.767   & 0.006 & 0.780 & 0.759 \\
+			\bottomrule
+		\end{tabular}
+		\caption{Porównanie miary \textbf{precision}.}
+	\end{minipage}
+\end{table}
+
+W porównaniu SVM widoczny jest spadek \textit{accuracy}, \textit{F1} i
+\textit{recall} względem implementacji referencyjnej, przy zachowaniu podobnej
+\textit{precision}. Różnice te wynikają z odmiennego sposobu uczenia (Pegasos)
+jednak kierunek wyników pozostaje spójny z wersją referencyjną.
+
+\subsection{Proces uczenia aktywnego}
+
 \section{Opis funkcjonalny}
 System składa się z dwóch głównych programów uruchamianych z linii poleceń:
 \texttt{src.main} realizującego pętlę uczenia aktywnego oraz
@@ -196,241 +432,6 @@ metrics = ["accuracy", "precision", "recall", "f1"]
 output = "results/compare"
 \end{verbatim}
 
-\section{Opis algorytmów} \subsection{Random forest} Las losowy jest algorytmem,
-który generuje wiele różnych drzew w procesie uczenia i przypisuje klasy, będące
-dominantą wyników poszczególnych drzew. W odróżnieniu od pojedynczego drzewa
-tendencja modelu do nadmiernego dopasowania jest dużo mniejsza. Każde drzewo
-trenowane jest na tylu przykładach ile jest w zbiorze trenującym, jednakże
-losowane są one ze zwracaniem. Ponadto ograniczony jest zestaw atrybutów,
-wybierane jest ich wyłącznie $\sqrt{|A|}$ (bez zwracania), gdzie $A$
-\textendash{} to zbiór atrybutów.
-
-Każde drzewo wchodzące w skład lasu losowego jest drzewem typu \textit{CART}.
-Reguły podziału w poszczególnych węzłach są konstruowane w taki sposób, aby po
-podziale minimalizować wartość \textbf{zanieczyszczenia Gini’ego} (w przypadku
-zadania klasyfikacji). Miara ta jest dana wzorem: \begin{equation*} Gini(x) =
-	\sum_{i=0}^{|C|} 1-p_i^2 \end{equation*} gdzie $p_i$ \textendash{}
-prawdopodobieństwo $i$-tej klasy w węźle, a $C$ \textendash{} zbiór klas.
-
-\subsection{SVM} Maszyna wektorów nośnych jest algorytmem klasyfikacji, który
-wyznacza optymalną hiperpłaszczyznę rozdzielającą klasy w przestrzeni cech. Dla
-problemu binarnego hiperpłaszczyzna jest definiowana przez wektor wag
-$\mathbf{w}$ i wyraz wolny $b$, a klasyfikacja nowej próbki $\mathbf{x}$ odbywa
-się na podstawie znaku funkcji decyzyjnej $f(\mathbf{x}) =
-	\mathbf{w}^T\mathbf{x} + b$.
-
-Kluczową ideą SVM jest maksymalizacja marginesu, czyli odległości między
-hiperpłaszczyzną a najbliższymi punktami każdej z klas (tzw.\ wektorami
-nośnymi). W przypadku danych nieliniowo rozdzielnych wprowadza się parametr kary
-$C$, który kontroluje kompromis między maksymalizacją marginesu a minimalizacją
-błędu klasyfikacji. W implementacji zastosowano standaryzację cech na podstawie
-średniej i odchylenia standardowego wyznaczanego na zbiorze treningowym, a
-parametry te są następnie używane podczas predykcji. Uczenie wag realizowane
-jest metodą Pegasos (SGD) z losowym tasowaniem próbek oraz krokiem uczenia
-malejącym według $
-	\eta_t = \frac{\eta}{1 + \eta \lambda t}$, gdzie
-$\lambda = \frac{1}{C \cdot n}$, minimalizując funkcję celu zawierającą
-\textbf{funkcję straty zawiasowej}:
-
-\begin{equation*} L(\mathbf{w}, b) = \frac{1}{2}\|\mathbf{w}\|^2 + C
-	\sum_{i=1}^{n} \max(0, 1 - y_i(\mathbf{w}^T\mathbf{x}_i + b)) \end{equation*}
-
-\noindent gdzie $y_i \in \{-1, 1\}$ \textendash{} etykieta $i$-tej próbki, a $C$
-\textendash{} parametr kary.
-
-W sytuacjach wymagających probabilistycznego wyjścia modelu (co jest kluczowe
-np.\ w uczeniu aktywnym), możliwe jest zastosowanie metody \textbf{Platta}.
-Pozwala ona na dopasowanie funkcji sigmoidalnej do wartości funkcji decyzyjnej
-SVM, co umożliwia przekształcenie ich w oszacowania prawdopodobieństwa:
-
-\begin{equation*} P(y=1|\mathbf{x}) = \frac{1}{1 + \exp(A \cdot f(\mathbf{x}) +
-		B)} \end{equation*}
-
-\noindent gdzie parametry $A$ i $B$ wyznaczane są poprzez minimalizację ujemnej
-logarytmicznej funkcji wiarygodności na zbiorze treningowym.
-
-\section{Zbiory danych}
-\subsection{Pomocniczy} W ramach prostych testów sprawdzających poprawność
-implementacji naszych algorytmów wykorzystano odniesienie do wartości zwracanej
-przez klasyfikatory opracowane w bilbliotece \textit{SKLEARN}. Do testów
-wykorzystano zbiór danych dotyczący
-\href{https://archive.ics.uci.edu/dataset/109/wine}{jakości win}. Zadanie
-sprowadzono do klasyfikacji binarnej \textendash{} jakość mniejsza niż 6 wskazuje na
-klasę 0, a większa na 1. Zbiór zawiera 1599 przykładów i 11 atrybutów, z czego
-wszystkie są ciągłe.
-
-\subsection{Główny}
-Jako główny zbiór danych wykorzystywany w pętli uczenia aktywnego wybrano
-\href{https://www.kaggle.com/datasets/imsparsh/flowers-dataset/data}{zestaw}
-zawierający zdjęcia kwiatów. Pierwotnie podjęto taką decyzję, ponieważ założono,
-że przykłady będą etykietowane manualnie co jest łatwiejsze do zrealizowania
-patrząc na zdjęcie, a nie wektor cech. Jak się później okazało, takie podejście
-jest niemożliwe do zrealizowania ze względów ograniczeń czasowych jeżeli chcemy
-przeprowadzić dokładne eksperymenty bazujące na $n$-krotnych powtórzeniach
-walidacji krzyżowej. Przed przystąpieniem do przeprowadzenia eksperymentów
-został zbiór został przetworzony w następujący sposób:
-
-\begin{itemize}
-	\item Pozostawienie wyłącznie próbek zklasyfikowanych jako mniszki lekarskie
-	      lub słoneczniki \textendash{} ograniczenie się do klasyfikacji binarnej;
-	\item Usunięcie prawie wszystkich próbek słoneczników (ostateczny stosunek
-	      klas to 1:20) \textendash{} stworzenie niezbalansowanego zbioru danych;
-	\item Zamaskowanie etykiet 75\% przykładów (stają się one całkowicie
-	      niewidoczne dla modelu) \textendash{} symulacja sytuacji braku etykiet;
-	\item  Przetworzenie zdjęcia do postaci reprezentacji wektorowej z
-	      wykorzystaniem wcześniej wytrenowanej sieci neuronowej \textit{ResNet50}.
-\end{itemize}
-
-Ostatecznie zbiór danych składa się z 680 przykładów \textendash{} 30
-słoneczników (klasa 1) i 650 mniszków lekarskich (klasa 0). Każdy przykład ma
-dokładnie 2048 atrybutów (wszystkie ciągłe).
-
-\section{Eksperymenty}
-\subsection{Porównanie z \textit{SKLEARN}}
-Tak jak wspomniano w sekcji dotyczącej opisu zbiorów danych przeprowadzono testy
-porównawcze z biblioteką \textit{SKLEARN} w celu odniesienia uzyskanych wyników do
-wartości referencyjnych. Przeprowadzonych zostało 10 niezależnych uruchomień,
-każde z innym ziarnem startowym wykorzystywanym do dzielenia zbiorów danych na
-trenujący i testujący (80\% \textendash{} 20\%) oraz jako parametr algorytmu
-uczącego. Następnie zagregowano wyniki. Parametry modeli zostały ustawione
-jednakowo, zgodnie z domyślnymi w \textit{SKLEARN}. Do porównania wykorzystano
-standardowe miary oceny jakości klasyfikatora.
-
-\subsubsection{Las losowy}
-
-\begin{table}[!ht]
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\small
-		\begin{tabular}{lcccc}
-			\toprule
-			algorytm                  & średnia & std   & max   & min   \\
-			\midrule
-			forest                    & 0.777   & 0.009 & 0.790 & 0.761 \\
-			\textit{\textbf{SKLEARN}} & 0.800   & 0.004 & 0.807 & 0.790 \\
-			\bottomrule
-		\end{tabular}
-		\caption{Porównanie miary \textbf{accuracy}.}
-	\end{minipage}
-	\hfill
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\small
-		\begin{tabular}{lcccc}
-			\toprule
-			algorytm                  & średnia & std   & max   & min   \\
-			\midrule
-			forest                    & 0.840   & 0.006 & 0.848 & 0.828 \\
-			\textbf{\textit{SKLEARN}} & 0.847   & 0.003 & 0.852 & 0.837 \\
-			\bottomrule
-		\end{tabular}
-		\caption{Porównanie miary \textbf{F1-Score}.}
-	\end{minipage}
-\end{table}
-
-\begin{table}[!ht]
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\small
-		\begin{tabular}{lcccc}
-			\toprule
-			algorytm                  & średnia & std   & max   & min   \\
-			\midrule
-			forest                    & 0.925   & 0.009 & 0.935 & 0.905 \\
-			\textbf{\textit{SKLEARN}} & 0.874   & 0.009 & 0.884 & 0.855 \\
-			\bottomrule
-		\end{tabular}
-		\caption{Porównanie miary \textbf{recall}.}
-	\end{minipage}
-	\hfill
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\small
-		\begin{tabular}{lcccc}
-			\toprule
-			algorytm                  & średnia & std   & max   & min   \\
-			\midrule
-			forest                    & 0.770   & 0.007 & 0.783 & 0.757 \\
-			\textbf{\textit{SKLEARN}} & 0.822   & 0.005 & 0.834 & 0.814 \\
-			\bottomrule
-		\end{tabular}
-		\caption{Porównanie miary \textbf{precision}.}
-	\end{minipage}
-\end{table}
-
-Wyniki są porównywalne, a obserwowane różnice wynikają najpewniej z odmiennych
-sposobów implementacji algorytmów. Otrzymane wartości są na tyle zbliżone, że
-można uznać nasze implementacje za poprawne.
-
-\subsubsection{SVM}
-
-\begin{table}[!ht]
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\small
-		\begin{tabular}{lcccc}
-			\toprule
-			algorytm                  & średnia & std   & max   & min   \\
-			\midrule
-			svm                       & 0.713   & 0.013 & 0.731 & 0.690 \\
-			\textbf{\textit{SKLEARN}} & 0.740   & 0.008 & 0.754 & 0.728 \\
-			\bottomrule
-		\end{tabular}
-		\caption{Porównanie miary \textbf{accuracy}.}
-	\end{minipage}
-	\hfill
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\small
-		\begin{tabular}{lcccc}
-			\toprule
-			algorytm                  & średnia & std   & max   & min   \\
-			\midrule
-			svm                       & 0.775   & 0.012 & 0.788 & 0.752 \\
-			\textbf{\textit{SKLEARN}} & 0.805   & 0.006 & 0.815 & 0.794 \\
-			\bottomrule
-		\end{tabular}
-		\caption{Porównanie miary \textbf{F1-Score}.}
-	\end{minipage}
-\end{table}
-
-\begin{table}[!ht]
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\small
-		\begin{tabular}{lcccc}
-			\toprule
-			algorytm                  & średnia & std   & max   & min   \\
-			\midrule
-			svm                       & 0.783   & 0.035 & 0.839 & 0.710 \\
-			\textbf{\textit{SKLEARN}} & 0.846   & 0.009 & 0.856 & 0.826 \\
-			\bottomrule
-		\end{tabular}
-		\caption{Porównanie miary \textbf{recall}.}
-	\end{minipage}
-	\hfill
-	\begin{minipage}{0.48\linewidth}
-		\centering
-		\small
-		\begin{tabular}{lcccc}
-			\toprule
-			algorytm                  & średnia & std   & max   & min   \\
-			\midrule
-			svm                       & 0.769   & 0.022 & 0.799 & 0.719 \\
-			\textbf{\textit{SKLEARN}} & 0.767   & 0.006 & 0.780 & 0.759 \\
-			\bottomrule
-		\end{tabular}
-		\caption{Porównanie miary \textbf{precision}.}
-	\end{minipage}
-\end{table}
-
-W porównaniu SVM widoczny jest spadek \textit{accuracy}, \textit{F1} i
-\textit{recall} względem implementacji referencyjnej, przy zachowaniu podobnej
-\textit{precision}. Różnice te wynikają z odmiennego sposobu uczenia (Pegasos)
-jednak kierunek wyników pozostaje spójny z wersją referencyjną.
-
-\subsection{Proces uczenia aktywnego}
-
 \section{Opis wykorzystanych narzędzi}
 W implementacji wykorzystano narzędzia i biblioteki wspierające zarówno obróbkę
 obrazów, jak i eksperymenty z uczeniem aktywnym. Projekt został napisany w języku
@@ -448,7 +449,7 @@ Najważniejsze użyte technologie i biblioteki:
 	\item \texttt{kagglehub} \textendash{} pobieranie zbioru zdjęć kwiatów;
 	\item \texttt{ucimlrepo} \textendash{} pobieranie zbioru jakości win do testów
 	      porównawczych;
-	\item \texttt{matplotlib} \textendash{} wsparcie dla wizualizacji wyników;
+	\item \texttt{matplotlib} \textendash{} wsparcie dla wizualizacji wyników.
 \end{itemize}
 
 \end{document}
